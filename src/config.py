@@ -11,7 +11,7 @@ if not api_key:
 genai.configure(api_key=api_key)
 
 class Config:
-    MODEL_NAME = "gemini-2.5-pro" 
+    MODEL_NAME = "gemini-2.5-flash" 
     
     GENERATION_CONFIG = {
         "temperature": 0.0,

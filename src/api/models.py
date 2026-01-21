@@ -19,3 +19,14 @@ class ChatResponse(BaseModel):
     answer: str
     citations: List[str]
     comparison: Optional[ComparisonResult] = None
+
+class TreeNode(BaseModel):
+    id: str
+    title: str
+    summary: Optional[str] = None
+    page_ref: Optional[str] = None
+    children: Optional[List['TreeNode']] = None
+
+class TreeResponse(BaseModel):
+    document_name: str
+    tree: Dict[str, Any]

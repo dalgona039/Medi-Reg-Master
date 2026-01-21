@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 from src.config import Config
 from src.core.indexer import RegulatoryIndexer
 from src.core.reasoner import RegulatoryReasoner
-from src.api.models import ChatRequest, ChatResponse, IndexRequest, ComparisonResult
+from src.api.models import ChatRequest, ChatResponse, IndexRequest, ComparisonResult, TreeResponse
 
 router = APIRouter()
 
@@ -279,6 +279,43 @@ async def list_pdfs() -> Dict[str, List[str]]:
             detail=f"Failed to list PDFs: {str(e)}"
         )
 
+@router.get("/tree/{index_filename}", response_model=TreeResponse)
+async def get_tree_structure(index_filename: str) -> TreeResponse:
+    if not index_filename.endswith("_index.json"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid index filename format"
+        )
+    
+    index_path = os.path.join(Config.INDEX_DIR, index_filename)
+    
+    if not os.path.exists(index_path):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Index file not found: {index_filename}"
+        )
+    
+    try:
+        with open(index_path, 'r', encoding='utf-8') as f:
+            tree_data = json.load(f)
+        
+        doc_name = index_filename.replace("_index.json", "")
+        
+        return TreeResponse(
+            document_name=doc_name,
+            tree=tree_data
+        )
+    except json.JSONDecodeError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Invalid JSON in index file: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to load tree: {str(e)}"
+        )
+
 def _extract_citations(text: str) -> List[str]:
     import re
     citations = []
@@ -305,6 +342,10 @@ def _extract_citations(text: str) -> List[str]:
     unique_citations = []
     for c in citations:
         if c not in seen:
+            seen.add(c)
+            unique_citations.append(c)
+    
+    return unique_citations
 
 def _extract_comparison(text: str, doc_names: List[str]) -> ComparisonResult:
     import re
@@ -337,7 +378,3 @@ def _extract_comparison(text: str, doc_names: List[str]) -> ComparisonResult:
         commonalities=commonalities,
         differences=differences
     )
-            seen.add(c)
-            unique_citations.append(c)
-    
-    return unique_citations

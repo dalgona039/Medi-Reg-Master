@@ -9,8 +9,21 @@ import { ko } from "date-fns/locale";
 import { 
   Upload, FileText, Send, Bot, User, Loader2, 
   Plus, MessageSquare, PanelLeftClose, PanelLeft,
-  Trash2, Copy, Check
+  Trash2, Copy, Check, ChevronRight, ChevronDown, FolderTree
 } from "lucide-react";
+
+type TreeNode = {
+  id: string;
+  title: string;
+  summary?: string;
+  page_ref?: string;
+  children?: TreeNode[];
+};
+
+type TreeData = {
+  document_name: string;
+  tree: TreeNode;
+};
 
 type ComparisonResult = {
   has_comparison: boolean;
@@ -49,6 +62,9 @@ export default function Home() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [showTree, setShowTree] = useState(false);
+  const [treeData, setTreeData] = useState<TreeData | null>(null);
+  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -244,6 +260,67 @@ export default function Home() {
     }
   };
 
+  const loadTreeStructure = async (indexFilename: string) => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/tree/${indexFilename}`);
+      setTreeData(res.data);
+      setShowTree(true);
+      setExpandedNodes(new Set([res.data.tree.id]));
+      toast.success(`트리 로드 완료: ${res.data.document_name}`);
+    } catch (error) {
+      toast.error("트리 로드 실패");
+      console.error(error);
+    }
+  };
+
+  const toggleNode = (nodeId: string) => {
+    setExpandedNodes(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(nodeId)) {
+        newSet.delete(nodeId);
+      } else {
+        newSet.add(nodeId);
+      }
+      return newSet;
+    });
+  };
+
+  const renderTreeNode = (node: TreeNode, level: number = 0): JSX.Element => {
+    const isExpanded = expandedNodes.has(node.id);
+    const hasChildren = node.children && node.children.length > 0;
+    
+    return (
+      <div key={node.id} className="mb-1">
+        <div 
+          className={`flex items-start gap-2 p-2 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors ${
+            level > 0 ? 'ml-' + (level * 4) : ''
+          }`}
+          onClick={() => hasChildren && toggleNode(node.id)}
+        >
+          {hasChildren ? (
+            isExpanded ? <ChevronDown size={16} className="mt-1 text-slate-600" /> : <ChevronRight size={16} className="mt-1 text-slate-600" />
+          ) : (
+            <div className="w-4" />
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="font-medium text-sm text-slate-800">{node.title}</div>
+            {node.page_ref && (
+              <div className="text-xs text-indigo-600 mt-0.5">📄 p.{node.page_ref}</div>
+            )}
+            {node.summary && isExpanded && (
+              <div className="text-xs text-slate-600 mt-1 leading-relaxed">{node.summary}</div>
+            )}
+          </div>
+        </div>
+        {isExpanded && hasChildren && (
+          <div className="ml-2">
+            {node.children!.map(child => renderTreeNode(child, level + 1))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const copyToClipboard = async (text: string, id: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -358,6 +435,17 @@ export default function Home() {
                 />
               </label>
             </div>
+          )}
+
+          {currentSessionId && currentSession && (
+            <button
+              onClick={() => loadTreeStructure(currentSession.indexFiles[0])}
+              className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm rounded-lg transition-colors"
+              title="문서 구조 보기"
+            >
+              <FolderTree size={16} />
+              트리 구조
+            </button>
           )}
         </header>
 
@@ -511,6 +599,32 @@ export default function Home() {
         )}
 
       </main>
+
+      {showTree && treeData && (
+        <aside className="w-96 bg-white border-l border-slate-200 flex flex-col overflow-hidden">
+          <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <FolderTree size={18} className="text-indigo-600" />
+              <h3 className="font-semibold text-slate-800">문서 구조</h3>
+            </div>
+            <button
+              onClick={() => setShowTree(false)}
+              className="p-1 hover:bg-slate-100 rounded"
+              aria-label="트리 닫기"
+            >
+              <PanelLeft size={18} className="text-slate-500" />
+            </button>
+          </div>
+          
+          <div className="px-4 py-2 bg-slate-50 border-b border-slate-100">
+            <div className="text-sm font-medium text-slate-700">{treeData.document_name}</div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-4">
+            {renderTreeNode(treeData.tree)}
+          </div>
+        </aside>
+      )}
     </div>
   );
 }

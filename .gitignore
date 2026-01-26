@@ -106,3 +106,26 @@ htmlcov/
 Network Trash Folder
 Temporary Items
 .apdisk
+
+# API Key 보안 (절대 업로드 금지)
+.env
+
+# Python 관련
+__pycache__/
+*.pyc
+venv/
+.pytest_cache/
+
+# Mac 시스템 파일
+.DS_Store
+
+# 데이터 파일 (PDF나 생성된 인덱스는 용량이 클 수 있으므로 제외 추천)
+# 필요하다면 주석 해제하여 포함 가능
+data/raw/
+data/indices/
+
+# Frontend 관련 (용량 큼)
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/

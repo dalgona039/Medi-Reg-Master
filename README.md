@@ -346,8 +346,9 @@ MIT License - see [LICENSE](LICENSE) file for details
 
 ## 📞 Contact
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/TreeRAG/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/TreeRAG/discussions)
+**Lee Won Seok**  
+Biomedical Engineering, Kyung Hee University  
+📧 icpuff83@khu.ac.kr
 
 ---
 

@@ -3,11 +3,11 @@ import shutil
 import json
 from typing import Dict, List
 from fastapi import APIRouter, UploadFile, File, HTTPException, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from src.config import Config
 from src.core.indexer import RegulatoryIndexer
 from src.core.reasoner import TreeRAGReasoner
-from src.api.models import ChatRequest, ChatResponse, IndexRequest, ComparisonResult, TreeResponse
+from src.api.models import ChatRequest, ChatResponse, IndexRequest, ComparisonResult, TreeResponse, TraversalInfo
 
 router = APIRouter()
 
@@ -220,9 +220,13 @@ async def chat(req: ChatRequest) -> ChatResponse:
             )
     
     try:
+        use_traversal = req.use_deep_traversal if req.use_deep_traversal is not None else Config.USE_DEEP_TRAVERSAL
+        max_depth = req.max_depth if req.max_depth is not None else Config.MAX_TRAVERSAL_DEPTH
+        max_branches = req.max_branches if req.max_branches is not None else Config.MAX_BRANCHES_PER_LEVEL
+        
         reasoner = TreeRAGReasoner(
             selected_indices,
-            use_deep_traversal=Config.USE_DEEP_TRAVERSAL
+            use_deep_traversal=use_traversal
         )
         
         if req.node_context:
@@ -233,16 +237,18 @@ async def chat(req: ChatRequest) -> ChatResponse:
 질문: {req.question}
 
 이 섹션과 관련된 내용을 중심으로 상세히 답변해주세요."""
-            answer = reasoner.query(
+            answer, traversal_info = reasoner.query(
                 enhanced_question, 
                 enable_comparison=req.enable_comparison,
-                max_depth=Config.MAX_TRAVERSAL_DEPTH
+                max_depth=max_depth,
+                max_branches=max_branches
             )
         else:
-            answer = reasoner.query(
+            answer, traversal_info = reasoner.query(
                 req.question, 
                 enable_comparison=req.enable_comparison,
-                max_depth=Config.MAX_TRAVERSAL_DEPTH
+                max_depth=max_depth,
+                max_branches=max_branches
             )
         
         citations = _extract_citations(answer)
@@ -251,7 +257,20 @@ async def chat(req: ChatRequest) -> ChatResponse:
         if len(selected_indices) > 1 and req.enable_comparison:
             comparison = _extract_comparison(answer, selected_indices)
         
-        return ChatResponse(answer=answer, citations=citations, comparison=comparison)
+        trav_info = TraversalInfo(
+            used_deep_traversal=traversal_info["used_deep_traversal"],
+            nodes_visited=traversal_info["nodes_visited"],
+            nodes_selected=traversal_info["nodes_selected"],
+            max_depth=traversal_info["max_depth"],
+            max_branches=traversal_info["max_branches"]
+        )
+        
+        return ChatResponse(
+            answer=answer, 
+            citations=citations, 
+            comparison=comparison,
+            traversal_info=trav_info
+        )
     except FileNotFoundError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -337,6 +356,28 @@ async def get_tree_structure(index_filename: str) -> TreeResponse:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to load tree: {str(e)}"
         )
+
+@router.get("/pdf/{filename}")
+async def serve_pdf(filename: str):
+    from urllib.parse import quote
+    
+    pdf_path = os.path.join(Config.RAW_DATA_DIR, filename)
+    
+    if not os.path.exists(pdf_path):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"PDF file not found: {filename}"
+        )
+    
+    encoded_filename = quote(filename.encode('utf-8'))
+    
+    return FileResponse(
+        pdf_path,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"inline; filename*=UTF-8''{encoded_filename}"
+        }
+    )
 
 def _extract_citations(text: str) -> List[str]:
     import re

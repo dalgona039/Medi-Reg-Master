@@ -9,7 +9,8 @@ import { ko } from "date-fns/locale";
 import { 
   Upload, FileText, Send, Bot, User, Loader2, 
   Plus, MessageSquare, PanelLeftClose, PanelLeft,
-  Trash2, Copy, Check, ChevronRight, ChevronDown, FolderTree
+  Trash2, Copy, Check, ChevronRight, ChevronDown, FolderTree,
+  Settings, X
 } from "lucide-react";
 
 type TreeNode = {
@@ -32,11 +33,24 @@ type ComparisonResult = {
   differences?: string;
 };
 
+type TraversalInfo = {
+  used_deep_traversal: boolean;
+  nodes_visited: string[];
+  nodes_selected: Array<{
+    document: string;
+    title: string;
+    page_ref: string;
+  }>;
+  max_depth: number;
+  max_branches: number;
+};
+
 type Message = {
   role: "user" | "assistant";
   content: string;
   citations?: string[];
   comparison?: ComparisonResult;
+  traversal_info?: TraversalInfo;
 };
 
 type ChatSession = {
@@ -66,6 +80,13 @@ export default function Home() {
   const [treeData, setTreeData] = useState<TreeData | null>(null);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [selectedNode, setSelectedNode] = useState<TreeNode | null>(null);
+  const [useDeepTraversal, setUseDeepTraversal] = useState(true);
+  const [maxDepth, setMaxDepth] = useState(5);
+  const [maxBranches, setMaxBranches] = useState(3);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showPdfViewer, setShowPdfViewer] = useState(false);
+  const [pdfFile, setPdfFile] = useState<string | null>(null);
+  const [pdfPage, setPdfPage] = useState(1);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -208,6 +229,9 @@ export default function Home() {
       const requestBody: any = {
         question: userMsg,
         index_filenames: currentSession.indexFiles,
+        use_deep_traversal: useDeepTraversal,
+        max_depth: maxDepth,
+        max_branches: maxBranches,
       };
       
       if (selectedNode) {
@@ -224,6 +248,7 @@ export default function Home() {
       const botMsg = res.data.answer;
       const citations = res.data.citations || [];
       const comparison = res.data.comparison || null;
+      const traversalInfo = res.data.traversal_info || null;
 
       setSessions(prev => prev.map(session => 
         session.id === currentSessionId 
@@ -233,7 +258,8 @@ export default function Home() {
                 role: "assistant", 
                 content: botMsg,
                 citations,
-                comparison 
+                comparison,
+                traversal_info: traversalInfo
               }] 
             }
           : session
@@ -310,6 +336,20 @@ export default function Home() {
       const question = `"${node.title}" 섹션에 대해 자세히 설명해주세요.${node.page_ref ? ` (페이지 ${node.page_ref})` : ''}`;
       setInput(question);
       toast.success(`노드 선택됨: ${node.title}`);
+    }
+  };
+
+  const handleCitationClick = (citation: string) => {
+    const match = citation.match(/(.+?),\s*p\.(\d+)/);
+    if (match) {
+      const [_, docName, pageNum] = match;
+      const filename = `${docName.trim()}.pdf`;
+      setPdfFile(filename);
+      setPdfPage(parseInt(pageNum));
+      setShowPdfViewer(true);
+      toast.success(`PDF 열기: ${filename} (p.${pageNum})`);
+    } else {
+      toast.error("페이지 정보를 찾을 수 없습니다");
     }
   };
 
@@ -472,16 +512,92 @@ export default function Home() {
           )}
 
           {currentSessionId && currentSession && (
-            <button
-              onClick={() => loadTreeStructure(currentSession.indexFiles[0])}
-              className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm rounded-lg transition-colors"
-              title="문서 구조 보기"
-            >
-              <FolderTree size={16} />
-              트리 구조
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowSettings(!showSettings)}
+                className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm rounded-lg transition-colors"
+                title="Traversal 설정"
+              >
+                <Settings size={16} />
+                설정
+              </button>
+              <button
+                onClick={() => loadTreeStructure(currentSession.indexFiles[0])}
+                className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm rounded-lg transition-colors"
+                title="문서 구조 보기"
+              >
+                <FolderTree size={16} />
+                트리 구조
+              </button>
+            </div>
           )}
         </header>
+
+        {showSettings && currentSessionId && (
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200 p-4">
+            <div className="max-w-4xl mx-auto">
+              <h3 className="text-sm font-semibold text-slate-800 mb-3 flex items-center gap-2">
+                <Settings size={16} className="text-indigo-600" />
+                Deep Traversal 설정
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-white p-3 rounded-lg border border-blue-200">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={useDeepTraversal}
+                      onChange={(e) => setUseDeepTraversal(e.target.checked)}
+                      className="w-4 h-4 text-indigo-600 rounded"
+                    />
+                    <span className="text-sm font-medium text-slate-700">Deep Traversal 사용</span>
+                  </label>
+                  <p className="text-xs text-slate-500 mt-1 ml-6">
+                    {useDeepTraversal ? "트리를 탐색하여 관련 섹션만 선택" : "전체 문서를 사용 (레거시)"}
+                  </p>
+                </div>
+
+                <div className="bg-white p-3 rounded-lg border border-blue-200">
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    최대 깊이 (Max Depth)
+                  </label>
+                  <input
+                    type="number"
+                    value={maxDepth}
+                    onChange={(e) => setMaxDepth(Number(e.target.value))}
+                    min="1"
+                    max="10"
+                    disabled={!useDeepTraversal}
+                    className="w-full px-3 py-1 border border-slate-300 rounded text-sm disabled:bg-slate-100 disabled:text-slate-400"
+                  />
+                  <p className="text-xs text-slate-500 mt-1">
+                    트리 탐색 최대 깊이 (1-10)
+                  </p>
+                </div>
+
+                <div className="bg-white p-3 rounded-lg border border-blue-200">
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    브랜치 수 (Max Branches)
+                  </label>
+                  <input
+                    type="number"
+                    value={maxBranches}
+                    onChange={(e) => setMaxBranches(Number(e.target.value))}
+                    min="1"
+                    max="10"
+                    disabled={!useDeepTraversal}
+                    className="w-full px-3 py-1 border border-slate-300 rounded text-sm disabled:bg-slate-100 disabled:text-slate-400"
+                  />
+                  <p className="text-xs text-slate-500 mt-1">
+                    레벨당 탐색할 자식 노드 수 (1-10)
+                  </p>
+                </div>
+              </div>
+              <div className="mt-3 text-xs text-blue-700 bg-blue-100 p-2 rounded">
+                💡 <strong>팁:</strong> 깊이와 브랜치 수를 줄이면 응답 속도가 빨라지지만 정보가 제한될 수 있습니다.
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 scroll-smooth bg-white">
           {!currentSessionId ? (
@@ -538,12 +654,13 @@ export default function Home() {
                   {msg.citations && msg.citations.length > 0 && (
                     <div className="flex flex-wrap gap-2 mt-2 ml-1">
                       {msg.citations.map((citation, i) => (
-                        <span 
+                        <button
                           key={i}
-                          className="text-xs bg-indigo-50 text-indigo-700 px-2 py-1 rounded-full border border-indigo-100"
+                          onClick={() => handleCitationClick(citation)}
+                          className="text-xs bg-indigo-50 text-indigo-700 px-2 py-1 rounded-full border border-indigo-100 hover:bg-indigo-100 cursor-pointer transition-colors"
                         >
                           📎 {citation}
-                        </span>
+                        </button>
                       ))}
                     </div>
                   )}
@@ -575,6 +692,55 @@ export default function Home() {
                           <div className="font-medium text-red-700 mb-1">⚠ 차이점</div>
                           <div className="text-sm text-gray-700 bg-white p-2 rounded overflow-x-auto">
                             <ReactMarkdown>{msg.comparison.differences}</ReactMarkdown>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {msg.traversal_info && msg.traversal_info.used_deep_traversal && (
+                    <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                          <span className="text-lg">🌲</span>
+                        </div>
+                        <h4 className="font-semibold text-blue-900">Deep Traversal 정보</h4>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-3 mb-3 text-sm">
+                        <div className="bg-white p-2 rounded">
+                          <span className="text-blue-600 font-medium">탐색한 노드:</span>
+                          <span className="ml-2 text-slate-700">{msg.traversal_info.nodes_visited.length}개</span>
+                        </div>
+                        <div className="bg-white p-2 rounded">
+                          <span className="text-blue-600 font-medium">선택된 노드:</span>
+                          <span className="ml-2 text-slate-700">{msg.traversal_info.nodes_selected.length}개</span>
+                        </div>
+                        <div className="bg-white p-2 rounded">
+                          <span className="text-blue-600 font-medium">최대 깊이:</span>
+                          <span className="ml-2 text-slate-700">{msg.traversal_info.max_depth}</span>
+                        </div>
+                        <div className="bg-white p-2 rounded">
+                          <span className="text-blue-600 font-medium">브랜치 수:</span>
+                          <span className="ml-2 text-slate-700">{msg.traversal_info.max_branches}</span>
+                        </div>
+                      </div>
+
+                      {msg.traversal_info.nodes_selected.length > 0 && (
+                        <div>
+                          <div className="font-medium text-blue-700 mb-2 text-sm">선택된 섹션:</div>
+                          <div className="space-y-1 max-h-32 overflow-y-auto">
+                            {msg.traversal_info.nodes_selected.map((node, i) => (
+                              <div key={i} className="text-xs bg-white p-2 rounded flex items-start gap-2">
+                                <span className="text-blue-500 flex-shrink-0">•</span>
+                                <div className="flex-1 min-w-0">
+                                  <span className="font-medium text-slate-700">{node.title}</span>
+                                  <span className="text-slate-500 ml-2">
+                                    ({node.document}, p.{node.page_ref})
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         </div>
                       )}
@@ -683,6 +849,36 @@ export default function Home() {
             {renderTreeNode(treeData.tree)}
           </div>
         </aside>
+      )}
+
+      {showPdfViewer && pdfFile && (
+        <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl h-[90vh] flex flex-col">
+            <div className="p-4 border-b flex items-center justify-between bg-slate-50">
+              <div className="flex items-center gap-3">
+                <FileText size={20} className="text-indigo-600" />
+                <h3 className="font-semibold text-slate-800">{pdfFile}</h3>
+                <span className="text-sm text-slate-500">
+                  (페이지 {pdfPage})
+                </span>
+              </div>
+              <button
+                onClick={() => setShowPdfViewer(false)}
+                className="p-2 hover:bg-red-100 text-red-600 rounded-lg transition-colors"
+                title="닫기"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <iframe
+                src={`${API_BASE_URL}/pdf/${pdfFile}#page=${pdfPage}`}
+                className="w-full h-full border-0"
+                title="PDF Viewer"
+              />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

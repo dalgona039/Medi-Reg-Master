@@ -9,6 +9,9 @@ class ChatRequest(BaseModel):
     index_filenames: Optional[List[str]] = None
     enable_comparison: bool = True
     node_context: Optional[Dict[str, Any]] = None
+    use_deep_traversal: Optional[bool] = None
+    max_depth: Optional[int] = None
+    max_branches: Optional[int] = None
 
 class ComparisonResult(BaseModel):
     has_comparison: bool
@@ -16,10 +19,18 @@ class ComparisonResult(BaseModel):
     commonalities: Optional[str] = None
     differences: Optional[str] = None
 
+class TraversalInfo(BaseModel):
+    used_deep_traversal: bool
+    nodes_visited: List[str]
+    nodes_selected: List[Dict[str, Any]]
+    max_depth: int
+    max_branches: int
+
 class ChatResponse(BaseModel):
     answer: str
     citations: List[str]
     comparison: Optional[ComparisonResult] = None
+    traversal_info: Optional[TraversalInfo] = None
 
 class TreeNode(BaseModel):
     id: str

@@ -10,13 +10,14 @@ class TreeNavigator:
         self.document_name = document_name
         self.visited_nodes: List[str] = []
         self.relevant_nodes: List[Dict[str, Any]] = []
+        self.visited_titles: List[str] = []
     
     def search(
         self, 
         query: str, 
         max_depth: int = 5,
         max_branches: int = 3
-    ) -> List[Dict[str, Any]]:
+    ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
         print(f"🔍 Starting deep traversal for: {self.document_name}")
         print(f"   Query: {query[:100]}...")
         
@@ -24,7 +25,16 @@ class TreeNavigator:
         self._traverse_node(root, query, current_depth=0, max_depth=max_depth, max_branches=max_branches)
         
         print(f"✅ Found {len(self.relevant_nodes)} relevant sections")
-        return self.relevant_nodes
+        
+        traversal_stats = {
+            "nodes_visited": len(self.visited_nodes),
+            "visited_titles": self.visited_titles[:],
+            "nodes_selected": len(self.relevant_nodes),
+            "max_depth_used": max_depth,
+            "max_branches_used": max_branches
+        }
+        
+        return self.relevant_nodes, traversal_stats
     
     def _traverse_node(
         self,
@@ -36,11 +46,13 @@ class TreeNavigator:
         parent_context: str = ""
     ) -> None:
         node_id = node.get("id", "unknown")
+        node_title = node.get("title", "Untitled")
         
         if node_id in self.visited_nodes:
             return
         
         self.visited_nodes.append(node_id)
+        self.visited_titles.append(node_title)
         is_relevant = self._evaluate_node_relevance(node, query, parent_context, current_depth)
         
         if is_relevant:
@@ -127,6 +139,10 @@ JSON만 출력하세요:
                 config={"response_mime_type": "application/json"}
             )
             
+            if not response.text:
+                print(f"   ⚠️ No response for {title}, marking as not relevant")
+                return False
+            
             result = json.loads(response.text)
             is_relevant = result.get("relevant", False)
             
@@ -191,6 +207,10 @@ JSON만 출력하세요:
                 contents=prompt,
                 config={"response_mime_type": "application/json"}
             )
+            
+            if not response.text:
+                print(f"   ⚠️ No response for child selection, selecting first {max_branches}")
+                return children[:max_branches]
             
             result = json.loads(response.text)
             selected_indices = result.get("selected_indices", [])

@@ -24,12 +24,22 @@ class TreeRAGReasoner:
                 raise IOError(f"Failed to read index file {index_filename}: {e}")
 
 
-    def query(self, user_question: str, enable_comparison: bool = True, max_depth: int = 5) -> str:
+    def query(self, user_question: str, enable_comparison: bool = True, max_depth: int = 5, max_branches: int = 3) -> tuple[str, dict]:
         if not user_question or not user_question.strip():
             raise ValueError("user_question cannot be empty")
+        
+        traversal_info = {
+            "used_deep_traversal": self.use_deep_traversal,
+            "nodes_visited": [],
+            "nodes_selected": [],
+            "max_depth": max_depth,
+            "max_branches": max_branches
+        }
+        
         if self.use_deep_traversal:
             print("🌲 Using deep tree traversal mode")
-            context_str = self._build_context_with_traversal(user_question, max_depth)
+            context_str, trav_data = self._build_context_with_traversal(user_question, max_depth, max_branches)
+            traversal_info.update(trav_data)
         else:
             print("📄 Using flat context mode (legacy)")
             context_str = self._build_flat_context()
@@ -118,26 +128,40 @@ class TreeRAGReasoner:
             )
             if not response.text:
                 raise ValueError("Empty response from model")
-            return response.text
+            return response.text, traversal_info
         except Exception as e:
             print(f"❌ Query failed: {e}")
             raise
     
-    def _build_context_with_traversal(self, query: str, max_depth: int) -> str:
+    def _build_context_with_traversal(self, query: str, max_depth: int, max_branches: int) -> tuple[str, dict]:
         all_results = []
+        all_visited = []
+        all_selected = []
         
         for idx, tree in enumerate(self.index_trees):
             doc_name = self.index_filenames[idx].replace("_index.json", "")
             navigator = TreeNavigator(tree, doc_name)
-            relevant_nodes = navigator.search(
+            relevant_nodes, trav_stats = navigator.search(
                 query=query,
                 max_depth=max_depth,
-                max_branches=3
+                max_branches=max_branches
             )
             formatted = format_traversal_results(relevant_nodes, doc_name)
             all_results.append(formatted)
+            
+            all_visited.extend([f"{doc_name}: {title}" for title in trav_stats["visited_titles"]])
+            all_selected.extend([{
+                "document": doc_name,
+                "title": node["node"].get("title", "Untitled"),
+                "page_ref": node["node"].get("page_ref", "N/A")
+            } for node in relevant_nodes])
         
-        return "\n\n---\n\n".join(all_results)
+        traversal_data = {
+            "nodes_visited": all_visited,
+            "nodes_selected": all_selected
+        }
+        
+        return "\n\n---\n\n".join(all_results), traversal_data
     
     def _build_flat_context(self) -> str:
         combined_context = []

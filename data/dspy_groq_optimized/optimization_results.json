@@ -1,0 +1,15 @@
+{
+  "model": "groq/llama-3.3-70b-versatile",
+  "initial_avg": 0.4,
+  "optimized_avg": 0.4,
+  "improvement": 0.0,
+  "improvement_pct": 0.0,
+  "initial_scores": [
+    0.3,
+    0.5
+  ],
+  "optimized_scores": [
+    0.3,
+    0.5
+  ]
+}

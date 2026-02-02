@@ -223,6 +223,8 @@ async def chat(req: ChatRequest) -> ChatResponse:
         use_traversal = req.use_deep_traversal if req.use_deep_traversal is not None else Config.USE_DEEP_TRAVERSAL
         max_depth = req.max_depth if req.max_depth is not None else Config.MAX_TRAVERSAL_DEPTH
         max_branches = req.max_branches if req.max_branches is not None else Config.MAX_BRANCHES_PER_LEVEL
+        domain_template = req.domain_template if req.domain_template else "general"
+        language = req.language if req.language else "ko"
         
         reasoner = TreeRAGReasoner(
             selected_indices,
@@ -241,14 +243,18 @@ async def chat(req: ChatRequest) -> ChatResponse:
                 enhanced_question, 
                 enable_comparison=req.enable_comparison,
                 max_depth=max_depth,
-                max_branches=max_branches
+                max_branches=max_branches,
+                domain_template=domain_template,
+                language=language
             )
         else:
             answer, traversal_info = reasoner.query(
                 req.question, 
                 enable_comparison=req.enable_comparison,
                 max_depth=max_depth,
-                max_branches=max_branches
+                max_branches=max_branches,
+                domain_template=domain_template,
+                language=language
             )
         
         citations = _extract_citations(answer)

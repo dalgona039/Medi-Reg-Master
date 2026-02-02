@@ -10,7 +10,7 @@ import {
   Upload, FileText, Send, Bot, User, Loader2, 
   Plus, MessageSquare, PanelLeftClose, PanelLeft,
   Trash2, Copy, Check, ChevronRight, ChevronDown, FolderTree,
-  Settings, X, Download
+  Settings, X, Download, Search, Activity
 } from "lucide-react";
 
 type TreeNode = {
@@ -75,6 +75,256 @@ type ApiError = {
 const API_BASE_URL = "http://localhost:8000/api";
 const STORAGE_KEY = "treerag-sessions";
 
+// UI text translations
+const UI_TEXT = {
+  ko: {
+    settings: "설정",
+    export: "Export",
+    treeStructure: "트리 구조",
+    uploadPdf: "PDF 업로드 및 분석",
+    uploading: "업로드 중...",
+    indexing: "분석 중...",
+    complete: "완료!",
+    files: "파일",
+    analysisSettings: "분석 설정",
+    documentDomain: "문서 도메인",
+    responseLanguage: "답변 언어",
+    useDeepTraversal: "Deep Traversal 사용",
+    maxDepth: "최대 깊이 (Max Depth)",
+    maxBranches: "브랜치 수 (Max Branches)",
+    deepTraversalDesc: "트리를 탐색하여 관련 섹션만 선택",
+    flatModeDesc: "전체 문서를 사용 (레거시)",
+    domainOptimized: "선택한 도메인에 최적화된 분석을 제공합니다",
+    languageOptimized: "AI가 선택한 언어로 답변합니다",
+    newChat: "새 대화",
+    noHistory: "기록이 없습니다.",
+    welcomeTitle: "TreeRAG",
+    welcomeDesc: "PDF 문서를 업로드하면 AI가 자동으로 구조화하여 분석합니다.\\n계층적 트리 구조로 문서를 탐색하고 정확한 답변을 제공합니다.",
+    shortcutKey: "단축키:",
+    newSession: "새 세션",
+    typeMessage: "메시지를 입력하세요...",
+    sessionDeleted: "세션이 삭제되었습니다",
+    analysisComplete: "분석이 완료되었습니다!",
+    uploadFailed: "업로드/분석 실패",
+    treeLoaded: "트리 로드 완료",
+    treeLoadFailed: "트리 로드 실패",
+    markdownSaved: "Markdown 파일로 저장되었습니다",
+    nodeSelected: "노드 선택됨",
+    pdfOpen: "PDF 열기",
+    general: "일반 문서",
+    medical: "의료/임상 문서",
+    legal: "법률/계약 문서",
+    financial: "금융/재무 문서",
+    academic: "학술/연구 논문",
+    korean: "한국어",
+    english: "English",
+    japanese: "日本語",
+    deepTraversal: "Deep Traversal 사용",
+    flatMode: "Flat Mode 사용",
+    maxDepthDesc: "트리 탐색 최대 깊이 (1-10)",
+    maxBranchesDesc: "레벨당 탐색할 자식 노드 수 (1-10)",
+    tip: "팁",
+    tipMessage: "깊이와 브랜치 수를 줄이면 응답 속도가 빨라지지만 정보가 제한될 수 있습니다.",
+    analyzing: "AI가 규정을 분석하고 있습니다...",
+    selectedSection: "선택된 섹션",
+    sectionDeselected: "섹션 선택 해제됨",
+    sectionQuestion: "섹션에 대해 질문하기...",
+    send: "전송",
+    disclaimer: "AI 답변은 업로드된 문서에 기반하지만, 중요한 결정 시 반드시 원문을 재확인하시기 바랍니다.",
+    closeTree: "트리 닫기",
+    tipTreeClick: "팁: Shift + 클릭으로 섹션 선택 후 질문하기",
+    deleteSession: "세션 삭제",
+    openSidebar: "사이드바 열기",
+    closeSidebar: "사이드바 닫기",
+    processing: "처리 중...",
+    copiedToClipboard: "클립보드에 복사되었습니다",
+    copyFailed: "복사 실패",
+    recentHistory: "최근 기록",
+    comparisonAnalysis: "문서 비교 분석",
+    comparisonTarget: "비교 대상",
+    commonalities: "공통점",
+    differences: "차이점",
+    crossReferenceResolved: "Cross-reference 해결됨",
+    crossReferenceDesc: "질문에서 {count}개의 참조가 감지되어 자동으로 컨텍스트에 추가되었습니다",
+    page: "페이지",
+    searchPlaceholder: "대화 검색...",
+    searchResults: "검색 결과",
+    noSearchResults: "검색 결과가 없습니다",
+    performance: "성능 모니터링",
+    totalQueries: "총 질의 수",
+    avgResponseTime: "평균 응답 시간",
+    avgContextSize: "평균 컨텍스트 크기",
+    deepTraversalUsage: "Deep Traversal 사용률",
+    recentQueries: "최근 질의",
+    tokens: "토큰",
+    seconds: "초"
+  },
+  en: {
+    settings: "Settings",
+    export: "Export",
+    treeStructure: "Tree View",
+    uploadPdf: "Upload & Analyze PDF",
+    uploading: "Uploading...",
+    indexing: "Analyzing...",
+    complete: "Complete!",
+    files: "files",
+    analysisSettings: "Analysis Settings",
+    documentDomain: "Document Domain",
+    responseLanguage: "Response Language",
+    useDeepTraversal: "Use Deep Traversal",
+    maxDepth: "Max Depth",
+    maxBranches: "Max Branches",
+    deepTraversalDesc: "Navigate tree to select relevant sections only",
+    flatModeDesc: "Use entire document (legacy)",
+    domainOptimized: "Provides analysis optimized for selected domain",
+    languageOptimized: "AI responds in selected language",
+    newChat: "New Chat",
+    noHistory: "No history.",
+    welcomeTitle: "TreeRAG",
+    welcomeDesc: "Upload PDF documents and AI will automatically structure and analyze them.\\nExplore documents in hierarchical tree structure and get accurate answers.",
+    shortcutKey: "Shortcut:",
+    newSession: "New Session",
+    typeMessage: "Type a message...",
+    sessionDeleted: "Session deleted",
+    analysisComplete: "Analysis completed!",
+    uploadFailed: "Upload/Analysis failed",
+    treeLoaded: "Tree loaded",
+    treeLoadFailed: "Tree load failed",
+    markdownSaved: "Saved as Markdown file",
+    nodeSelected: "Node selected",
+    pdfOpen: "Open PDF",
+    general: "General Documents",
+    medical: "Medical/Clinical",
+    legal: "Legal/Contract",
+    financial: "Financial/Accounting",
+    academic: "Academic/Research",
+    korean: "한국어 (Korean)",
+    english: "English",
+    japanese: "日本語 (Japanese)",
+    deepTraversal: "Use Deep Traversal",
+    flatMode: "Use Flat Mode",
+    maxDepthDesc: "Maximum tree traversal depth (1-10)",
+    maxBranchesDesc: "Number of child nodes to explore per level (1-10)",
+    tip: "Tip",
+    tipMessage: "Reducing depth and branches speeds up response but may limit information.",
+    analyzing: "AI is analyzing the document...",
+    selectedSection: "Selected Section",
+    sectionDeselected: "Section deselected",
+    sectionQuestion: "Ask about this section...",
+    send: "Send",
+    disclaimer: "AI responses are based on uploaded documents, but please verify important decisions with the original text.",
+    closeTree: "Close tree",
+    tipTreeClick: "Tip: Shift + Click to select section before asking",
+    deleteSession: "Delete session",
+    openSidebar: "Open sidebar",
+    closeSidebar: "Close sidebar",
+    processing: "Processing...",
+    copiedToClipboard: "Copied to clipboard",
+    copyFailed: "Copy failed",
+    recentHistory: "Recent History",
+    comparisonAnalysis: "Document Comparison Analysis",
+    comparisonTarget: "Comparing",
+    commonalities: "Commonalities",
+    differences: "Differences",
+    crossReferenceResolved: "Cross-references Resolved",
+    crossReferenceDesc: "{count} references detected in question and automatically added to context",
+    page: "Page",
+    searchPlaceholder: "Search conversations...",
+    searchResults: "Search Results",
+    noSearchResults: "No results found",
+    performance: "Performance Monitoring",
+    totalQueries: "Total Queries",
+    avgResponseTime: "Avg Response Time",
+    avgContextSize: "Avg Context Size",
+    deepTraversalUsage: "Deep Traversal Usage",
+    recentQueries: "Recent Queries",
+    tokens: "tokens",
+    seconds: "sec"
+  },
+  ja: {
+    settings: "設定",
+    export: "エクスポート",
+    treeStructure: "ツリー表示",
+    uploadPdf: "PDF アップロード・分析",
+    uploading: "アップロード中...",
+    indexing: "分析中...",
+    complete: "完了！",
+    files: "ファイル",
+    analysisSettings: "分析設定",
+    documentDomain: "文書ドメイン",
+    responseLanguage: "応答言語",
+    useDeepTraversal: "Deep Traversal を使用",
+    maxDepth: "最大深度",
+    maxBranches: "ブランチ数",
+    deepTraversalDesc: "ツリーを探索して関連セクションのみを選択",
+    flatModeDesc: "文書全体を使用（レガシー）",
+    domainOptimized: "選択したドメインに最適化された分析を提供",
+    languageOptimized: "AIが選択した言語で応答します",
+    newChat: "新しいチャット",
+    noHistory: "履歴がありません。",
+    welcomeTitle: "TreeRAG",
+    welcomeDesc: "PDF文書をアップロードすると、AIが自動的に構造化して分析します。\\n階層的なツリー構造で文書を探索し、正確な回答を提供します。",
+    shortcutKey: "ショートカット：",
+    newSession: "新しいセッション",
+    typeMessage: "メッセージを入力してください...",
+    sessionDeleted: "セッションが削除されました",
+    analysisComplete: "分析が完了しました！",
+    uploadFailed: "アップロード/分析に失敗しました",
+    treeLoaded: "ツリーをロードしました",
+    treeLoadFailed: "ツリーのロードに失敗しました",
+    markdownSaved: "Markdownファイルとして保存されました",
+    nodeSelected: "ノードが選択されました",
+    pdfOpen: "PDFを開く",
+    general: "一般文書",
+    medical: "医療/臨床",
+    legal: "法律/契約",
+    financial: "金融/財務",
+    academic: "学術/研究",
+    korean: "한국어 (韓国語)",
+    english: "English (英語)",
+    japanese: "日本語",
+    deepTraversal: "Deep Traversal を使用",
+    flatMode: "Flat Mode を使用",
+    maxDepthDesc: "ツリー探索の最大深度 (1-10)",
+    maxBranchesDesc: "レベルごとに探索する子ノード数 (1-10)",
+    tip: "ヒント",
+    tipMessage: "深度とブランチ数を減らすと応答速度が速くなりますが、情報が制限される場合があります。",
+    analyzing: "AIが文書を分析しています...",
+    selectedSection: "選択されたセクション",
+    sectionDeselected: "セクション選択解除",
+    sectionQuestion: "このセクションについて質問...",
+    send: "送信",
+    disclaimer: "AIの回答はアップロードされた文書に基づいていますが、重要な決定の際は必ず原文を再確認してください。",
+    closeTree: "ツリーを閉じる",
+    tipTreeClick: "ヒント: Shift + クリックでセクションを選択してから質問",
+    deleteSession: "セッション削除",
+    openSidebar: "サイドバーを開く",
+    closeSidebar: "サイドバーを閉じる",
+    processing: "処理中...",
+    copiedToClipboard: "クリップボードにコピーされました",
+    copyFailed: "コピー失敗",
+    recentHistory: "最近の履歴",
+    comparisonAnalysis: "文書比較分析",
+    comparisonTarget: "比較対象",
+    commonalities: "共通点",
+    differences: "相違点",
+    crossReferenceResolved: "クロスリファレンス解決済み",
+    crossReferenceDesc: "質問から{count}個の参照が検出され、自動的にコンテキストに追加されました",
+    page: "ページ",
+    searchPlaceholder: "会話を検索...",
+    searchResults: "検索結果",
+    noSearchResults: "検索結果がありません",
+    performance: "パフォーマンスモニタリング",
+    totalQueries: "総質問数",
+    avgResponseTime: "平均応答時間",
+    avgContextSize: "平均コンテキストサイズ",
+    deepTraversalUsage: "Deep Traversal 使用率",
+    recentQueries: "最近の質問",
+    tokens: "トークン",
+    seconds: "秒"
+  }
+};
+
 export default function Home() {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
@@ -90,13 +340,38 @@ export default function Home() {
   const [useDeepTraversal, setUseDeepTraversal] = useState(true);
   const [maxDepth, setMaxDepth] = useState(5);
   const [maxBranches, setMaxBranches] = useState(3);
+  const [domainTemplate, setDomainTemplate] = useState("general");
+  const [language, setLanguage] = useState("ko");
   const [showSettings, setShowSettings] = useState(false);
   const [showPdfViewer, setShowPdfViewer] = useState(false);
   const [pdfFile, setPdfFile] = useState<string | null>(null);
   const [pdfPage, setPdfPage] = useState(1);
+  const [uploadProgress, setUploadProgress] = useState<{
+    current: number;
+    total: number;
+    currentFile: string;
+    status: 'idle' | 'uploading' | 'indexing' | 'complete';
+  } | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showPerformance, setShowPerformance] = useState(false);
+  const [performanceMetrics, setPerformanceMetrics] = useState<{
+    totalQueries: number;
+    avgResponseTime: number;
+    avgContextSize: number;
+    deepTraversalUsage: number;
+    queriesHistory: Array<{
+      timestamp: Date;
+      responseTime: number;
+      contextSize: number;
+      useDeepTraversal: boolean;
+    }>;
+  }>({ totalQueries: 0, avgResponseTime: 0, avgContextSize: 0, deepTraversalUsage: 0, queriesHistory: [] });
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Get UI text based on selected language
+  const t = UI_TEXT[language as keyof typeof UI_TEXT] || UI_TEXT.ko;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -152,14 +427,14 @@ export default function Home() {
     if (currentSessionId === sessionId) {
       setCurrentSessionId(null);
     }
-    toast.success("세션이 삭제되었습니다");
+    toast.success(t.sessionDeleted);
   };
 
   const handleFileUploadAndIndex = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     
     const files = Array.from(e.target.files);
-    const loadingToast = toast.loading(`${files.length}개의 파일을 업로드하고 분석 중입니다...`);
+    const totalFiles = files.length;
     
     try {
       setIsUploading(true);
@@ -167,12 +442,29 @@ export default function Home() {
       const indexFiles: string[] = [];
       const docNames: string[] = [];
 
-      for (const file of files) {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        
+        // Upload phase
+        setUploadProgress({
+          current: i + 1,
+          total: totalFiles,
+          currentFile: file.name,
+          status: 'uploading'
+        });
+        
         const formData = new FormData();
         formData.append("file", file);
-        
         await axios.post(`${API_BASE_URL}/upload`, formData);
 
+        // Indexing phase
+        setUploadProgress({
+          current: i + 1,
+          total: totalFiles,
+          currentFile: file.name,
+          status: 'indexing'
+        });
+        
         const indexRes = await axios.post(`${API_BASE_URL}/index`, {
           filename: file.name,
         });
@@ -199,12 +491,21 @@ export default function Home() {
       setSessions(prev => [newSession, ...prev]);
       setCurrentSessionId(newSession.id);
       
-      toast.success("분석이 완료되었습니다!", { id: loadingToast });
+      setUploadProgress({
+        current: totalFiles,
+        total: totalFiles,
+        currentFile: '',
+        status: 'complete'
+      });
+      
+      setTimeout(() => setUploadProgress(null), 2000);
+      toast.success(t.analysisComplete);
     } catch (error) {
       const err = error as { response?: { data?: ApiError } };
-      const message = err.response?.data?.detail || "업로드/분석 실패";
-      toast.error(message, { id: loadingToast });
+      const message = err.response?.data?.detail || t.uploadFailed;
+      toast.error(message);
       console.error(error);
+      setUploadProgress(null);
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) {
@@ -231,6 +532,7 @@ export default function Home() {
     ));
     
     setIsGenerating(true);
+    const startTime = Date.now();
 
     try {
       const requestBody: any = {
@@ -239,6 +541,8 @@ export default function Home() {
         use_deep_traversal: useDeepTraversal,
         max_depth: maxDepth,
         max_branches: maxBranches,
+        domain_template: domainTemplate,
+        language: language,
       };
       
       if (selectedNode) {
@@ -257,6 +561,36 @@ export default function Home() {
       const comparison = res.data.comparison || null;
       const traversalInfo = res.data.traversal_info || null;
       const resolvedReferences = res.data.resolved_references || null;
+
+      const responseTime = (Date.now() - startTime) / 1000; // seconds
+      const contextSize = traversalInfo?.total_tokens || 0;
+
+      // Update performance metrics
+      setPerformanceMetrics(prev => {
+        const newHistory = [
+          ...prev.queriesHistory,
+          {
+            timestamp: new Date(),
+            responseTime,
+            contextSize,
+            useDeepTraversal
+          }
+        ].slice(-50); // Keep last 50 queries
+
+        const totalQueries = prev.totalQueries + 1;
+        const avgResponseTime = (prev.avgResponseTime * prev.totalQueries + responseTime) / totalQueries;
+        const avgContextSize = (prev.avgContextSize * prev.totalQueries + contextSize) / totalQueries;
+        const deepTraversalCount = newHistory.filter(q => q.useDeepTraversal).length;
+        const deepTraversalUsage = (deepTraversalCount / newHistory.length) * 100;
+
+        return {
+          totalQueries,
+          avgResponseTime,
+          avgContextSize,
+          deepTraversalUsage,
+          queriesHistory: newHistory
+        };
+      });
 
       setSessions(prev => prev.map(session => 
         session.id === currentSessionId 
@@ -309,13 +643,14 @@ export default function Home() {
 
   const loadTreeStructure = async (indexFilename: string) => {
     try {
-      const res = await axios.get(`${API_BASE_URL}/tree/${indexFilename}`);
+      const encodedFilename = encodeURIComponent(indexFilename);
+      const res = await axios.get(`${API_BASE_URL}/tree/${encodedFilename}`);
       setTreeData(res.data);
       setShowTree(true);
       setExpandedNodes(new Set([res.data.tree.id]));
-      toast.success(`트리 로드 완료: ${res.data.document_name}`);
+      toast.success(`${t.treeLoaded}: ${res.data.document_name}`);
     } catch (error) {
-      toast.error("트리 로드 실패");
+      toast.error(t.treeLoadFailed);
       console.error(error);
     }
   };
@@ -344,7 +679,7 @@ export default function Home() {
       
       const question = `"${node.title}" 섹션에 대해 자세히 설명해주세요.${node.page_ref ? ` (페이지 ${node.page_ref})` : ''}`;
       setInput(question);
-      toast.success(`노드 선택됨: ${node.title}`);
+      toast.success(`${t.nodeSelected}: ${node.title}`);
     }
   };
 
@@ -356,7 +691,7 @@ export default function Home() {
       setPdfFile(filename);
       setPdfPage(parseInt(pageNum));
       setShowPdfViewer(true);
-      toast.success(`PDF 열기: ${filename} (p.${pageNum})`);
+      toast.success(`${t.pdfOpen}: ${filename} (p.${pageNum})`);
     }
   };
 
@@ -424,10 +759,10 @@ export default function Home() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    toast.success('Markdown 파일로 저장되었습니다');
+    toast.success(t.markdownSaved);
   };
 
-  const renderTreeNode = (node: TreeNode, level: number = 0): JSX.Element => {
+  const renderTreeNode = (node: TreeNode, level: number = 0): React.ReactElement => {
     const isExpanded = expandedNodes.has(node.id);
     const hasChildren = node.children && node.children.length > 0;
     const isSelected = selectedNode?.id === node.id;
@@ -440,7 +775,7 @@ export default function Home() {
           } ${
             isSelected ? 'bg-indigo-100 border border-indigo-300' : 'hover:bg-slate-50'
           }`}
-          onClick={(e) => handleNodeClick(node, hasChildren, e)}
+          onClick={(e) => handleNodeClick(node, !!hasChildren, e)}
           title="클릭: 펼치기/접기 | Shift+클릭: 이 섹션 질문하기"
         >
           {hasChildren ? (
@@ -473,10 +808,10 @@ export default function Home() {
     try {
       await navigator.clipboard.writeText(text);
       setCopiedId(id);
-      toast.success("클립보드에 복사되었습니다");
+      toast.success(t.copiedToClipboard);
       setTimeout(() => setCopiedId(null), 2000);
     } catch (error) {
-      toast.error("복사 실패");
+      toast.error(t.copyFailed);
     }
   };
 
@@ -491,7 +826,7 @@ export default function Home() {
           <button 
             onClick={() => setIsSidebarOpen(false)}
             className="p-2 hover:bg-slate-200 rounded-full text-slate-500"
-            aria-label="사이드바 닫기"
+            aria-label={t.closeSidebar}
           >
             <PanelLeftClose size={20} />
           </button>
@@ -501,16 +836,48 @@ export default function Home() {
           <button 
             onClick={createNewSession}
             className="flex items-center gap-3 bg-[#dde3ea] hover:bg-[#d0dbe7] text-slate-700 px-4 py-3 rounded-xl w-full transition-colors font-medium text-sm"
-            title="새 세션 (Ctrl+K)"
+            title={`${t.newChat} (Ctrl+K)`}
           >
             <Plus size={18} />
-            새로운 분석 시작
+            {t.newChat}
           </button>
         </div>
 
+        <div className="px-4 mb-4">
+          <div className="relative">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={t.searchPlaceholder}
+              className="w-full pl-9 pr-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                <X size={16} />
+              </button>
+            )}
+          </div>
+        </div>
+
         <div className="flex-1 overflow-y-auto px-2">
-          <div className="text-xs font-semibold text-slate-500 px-4 mb-2">최근 기록</div>
-          {sessions.map((session) => (
+          <div className="text-xs font-semibold text-slate-500 px-4 mb-2">
+            {searchQuery ? t.searchResults : t.recentHistory}
+          </div>
+          {sessions.filter(session => {
+            if (!searchQuery.trim()) return true;
+            const query = searchQuery.toLowerCase();
+            // 제목 검색
+            if (session.title.toLowerCase().includes(query)) return true;
+            // 대화 내용 검색
+            return session.messages.some(msg => 
+              msg.content.toLowerCase().includes(query)
+            );
+          }).map((session) => (
             <div
               key={session.id}
               className={`group relative w-full text-left flex items-center gap-3 px-4 py-2 rounded-full text-sm mb-1 transition-colors ${
@@ -534,7 +901,7 @@ export default function Home() {
               <button
                 onClick={(e) => deleteSession(session.id, e)}
                 className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded-full transition-opacity"
-                aria-label="세션 삭제"
+                aria-label={t.deleteSession}
               >
                 <Trash2 size={14} className="text-red-600" />
               </button>
@@ -543,7 +910,17 @@ export default function Home() {
           
           {sessions.length === 0 && (
             <div className="text-center text-slate-400 text-xs mt-10">
-              기록이 없습니다.
+              {t.noHistory}
+            </div>
+          )}
+          
+          {sessions.length > 0 && searchQuery && sessions.filter(session => {
+            const query = searchQuery.toLowerCase();
+            if (session.title.toLowerCase().includes(query)) return true;
+            return session.messages.some(msg => msg.content.toLowerCase().includes(query));
+          }).length === 0 && (
+            <div className="text-center text-slate-400 text-xs mt-10">
+              {t.noSearchResults}
             </div>
           )}
         </div>
@@ -557,7 +934,7 @@ export default function Home() {
               <button 
                 onClick={() => setIsSidebarOpen(true)}
                 className="p-2 hover:bg-slate-100 rounded-full text-slate-500 mr-2"
-                aria-label="사이드바 열기"
+                aria-label={t.openSidebar}
               >
                 <PanelLeft size={20} />
               </button>
@@ -571,7 +948,7 @@ export default function Home() {
             <div className="flex items-center gap-3">
               <label className="cursor-pointer flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition-colors">
                 {isUploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
-                {isUploading ? "처리 중..." : "PDF 업로드 및 분석"}
+                {isUploading ? t.processing : t.uploadPdf}
                 <input 
                   ref={fileInputRef}
                   type="file" 
@@ -585,43 +962,192 @@ export default function Home() {
             </div>
           )}
 
-          {currentSessionId && currentSession && (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => exportToMarkdown(currentSession)}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 text-sm rounded-lg transition-colors"
-                title="대화 내용 다운로드"
-              >
-                <Download size={16} />
-                Export
-              </button>
-              <button
-                onClick={() => setShowSettings(!showSettings)}
-                className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm rounded-lg transition-colors"
-                title="Traversal 설정"
-              >
-                <Settings size={16} />
-                설정
-              </button>
-              <button
-                onClick={() => loadTreeStructure(currentSession.indexFiles[0])}
-                className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm rounded-lg transition-colors"
-                title="문서 구조 보기"
-              >
-                <FolderTree size={16} />
-                트리 구조
-              </button>
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            {/* Performance button - always visible */}
+            <button
+              onClick={() => setShowPerformance(!showPerformance)}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 text-sm rounded-lg transition-colors"
+              title={t.performance}
+            >
+              <Activity size={16} />
+              {t.performance}
+            </button>
+
+            {/* Settings button - always visible */}
+            <button
+              onClick={() => setShowSettings(!showSettings)}
+              className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm rounded-lg transition-colors"
+              title={t.settings}
+            >
+              <Settings size={16} />
+              {t.settings}
+            </button>
+            
+            {/* Export and Tree buttons - only when session exists */}
+            {currentSessionId && currentSession && (
+              <>
+                <button
+                  onClick={() => exportToMarkdown(currentSession)}
+                  className="flex items-center gap-2 px-4 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 text-sm rounded-lg transition-colors"
+                  title={t.export}
+                >
+                  <Download size={16} />
+                  {t.export}
+                </button>
+                <button
+                  onClick={() => loadTreeStructure(currentSession.indexFiles[0])}
+                  className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm rounded-lg transition-colors"
+                  title={t.treeStructure}
+                >
+                  <FolderTree size={16} />
+                  {t.treeStructure}
+                </button>
+              </>
+            )}
+          </div>
         </header>
 
-        {showSettings && currentSessionId && (
+        {uploadProgress && (
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-200 p-4">
+            <div className="max-w-4xl mx-auto">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Loader2 className="animate-spin text-emerald-600" size={16} />
+                  <span className="text-sm font-semibold text-slate-800">
+                    {uploadProgress.status === 'uploading' && t.uploading}
+                    {uploadProgress.status === 'indexing' && t.indexing}
+                    {uploadProgress.status === 'complete' && t.complete}
+                  </span>
+                </div>
+                <span className="text-xs text-slate-600">
+                  {uploadProgress.current} / {uploadProgress.total} {t.files}
+                </span>
+              </div>
+              <div className="bg-white rounded-full h-2 overflow-hidden mb-2">
+                <div 
+                  className="bg-gradient-to-r from-emerald-500 to-green-500 h-full transition-all duration-300"
+                  style={{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }}
+                />
+              </div>
+              {uploadProgress.currentFile && (
+                <p className="text-xs text-slate-600 truncate">
+                  📄 {uploadProgress.currentFile}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {showPerformance && (
+          <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border-b border-blue-200 p-4">
+            <div className="max-w-4xl mx-auto">
+              <h3 className="text-sm font-semibold text-slate-800 mb-3 flex items-center gap-2">
+                <Activity size={16} className="text-blue-600" />
+                {t.performance}
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                <div className="bg-white p-3 rounded-lg border border-blue-200">
+                  <div className="text-xs text-slate-500 mb-1">{t.totalQueries}</div>
+                  <div className="text-2xl font-bold text-blue-600">{performanceMetrics.totalQueries}</div>
+                </div>
+                
+                <div className="bg-white p-3 rounded-lg border border-blue-200">
+                  <div className="text-xs text-slate-500 mb-1">{t.avgResponseTime}</div>
+                  <div className="text-2xl font-bold text-green-600">
+                    {performanceMetrics.avgResponseTime.toFixed(2)}{t.seconds}
+                  </div>
+                </div>
+                
+                <div className="bg-white p-3 rounded-lg border border-blue-200">
+                  <div className="text-xs text-slate-500 mb-1">{t.avgContextSize}</div>
+                  <div className="text-2xl font-bold text-purple-600">
+                    {Math.round(performanceMetrics.avgContextSize).toLocaleString()} {t.tokens}
+                  </div>
+                </div>
+                
+                <div className="bg-white p-3 rounded-lg border border-blue-200">
+                  <div className="text-xs text-slate-500 mb-1">{t.deepTraversalUsage}</div>
+                  <div className="text-2xl font-bold text-indigo-600">
+                    {performanceMetrics.deepTraversalUsage.toFixed(0)}%
+                  </div>
+                </div>
+              </div>
+              
+              {performanceMetrics.queriesHistory.length > 0 && (
+                <div className="bg-white p-3 rounded-lg border border-blue-200">
+                  <div className="text-xs font-medium text-slate-700 mb-2">{t.recentQueries}</div>
+                  <div className="space-y-1 max-h-32 overflow-y-auto">
+                    {performanceMetrics.queriesHistory.slice(-10).reverse().map((query, i) => (
+                      <div key={i} className="flex items-center justify-between text-xs">
+                        <span className="text-slate-600">
+                          {new Date(query.timestamp).toLocaleTimeString()}
+                        </span>
+                        <div className="flex items-center gap-3">
+                          <span className="text-green-600">{query.responseTime.toFixed(2)}{t.seconds}</span>
+                          <span className="text-purple-600">{query.contextSize.toLocaleString()} {t.tokens}</span>
+                          {query.useDeepTraversal && (
+                            <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-xs">Deep</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {showSettings && (
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200 p-4">
             <div className="max-w-4xl mx-auto">
               <h3 className="text-sm font-semibold text-slate-800 mb-3 flex items-center gap-2">
                 <Settings size={16} className="text-indigo-600" />
-                Deep Traversal 설정
+                {t.analysisSettings}
               </h3>
+              
+              {/* Domain Template Selection */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  📋 {t.documentDomain}
+                </label>
+                <select
+                  value={domainTemplate}
+                  onChange={(e) => setDomainTemplate(e.target.value)}
+                  className="w-full px-3 py-2 border border-blue-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="general">📋 {t.general}</option>
+                  <option value="medical">🏥 {t.medical}</option>
+                  <option value="legal">⚖️ {t.legal}</option>
+                  <option value="financial">💼 {t.financial}</option>
+                  <option value="academic">🎓 {t.academic}</option>
+                </select>
+                <p className="text-xs text-slate-500 mt-1">
+                  {t.domainOptimized}
+                </p>
+              </div>
+              
+              {/* Language Selection */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  🌐 {t.responseLanguage}
+                </label>
+                <select
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value)}
+                  className="w-full px-3 py-2 border border-blue-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="ko">🇰🇷 {t.korean}</option>
+                  <option value="en">🇺🇸 {t.english}</option>
+                  <option value="ja">🇯🇵 {t.japanese}</option>
+                </select>
+                <p className="text-xs text-slate-500 mt-1">
+                  {t.languageOptimized}
+                </p>
+              </div>
+              
+              {/* Deep Traversal Settings */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="bg-white p-3 rounded-lg border border-blue-200">
                   <label className="flex items-center gap-2 cursor-pointer">
@@ -631,16 +1157,16 @@ export default function Home() {
                       onChange={(e) => setUseDeepTraversal(e.target.checked)}
                       className="w-4 h-4 text-indigo-600 rounded"
                     />
-                    <span className="text-sm font-medium text-slate-700">Deep Traversal 사용</span>
+                    <span className="text-sm font-medium text-slate-700">{t.deepTraversal}</span>
                   </label>
                   <p className="text-xs text-slate-500 mt-1 ml-6">
-                    {useDeepTraversal ? "트리를 탐색하여 관련 섹션만 선택" : "전체 문서를 사용 (레거시)"}
+                    {useDeepTraversal ? t.deepTraversalDesc : t.flatModeDesc}
                   </p>
                 </div>
 
                 <div className="bg-white p-3 rounded-lg border border-blue-200">
                   <label className="block text-sm font-medium text-slate-700 mb-1">
-                    최대 깊이 (Max Depth)
+                    {t.maxDepth}
                   </label>
                   <input
                     type="number"
@@ -652,13 +1178,13 @@ export default function Home() {
                     className="w-full px-3 py-1 border border-slate-300 rounded text-sm disabled:bg-slate-100 disabled:text-slate-400"
                   />
                   <p className="text-xs text-slate-500 mt-1">
-                    트리 탐색 최대 깊이 (1-10)
+                    {t.maxDepthDesc}
                   </p>
                 </div>
 
                 <div className="bg-white p-3 rounded-lg border border-blue-200">
                   <label className="block text-sm font-medium text-slate-700 mb-1">
-                    브랜치 수 (Max Branches)
+                    {t.maxBranches}
                   </label>
                   <input
                     type="number"
@@ -670,12 +1196,12 @@ export default function Home() {
                     className="w-full px-3 py-1 border border-slate-300 rounded text-sm disabled:bg-slate-100 disabled:text-slate-400"
                   />
                   <p className="text-xs text-slate-500 mt-1">
-                    레벨당 탐색할 자식 노드 수 (1-10)
+                    {t.maxBranchesDesc}
                   </p>
                 </div>
               </div>
               <div className="mt-3 text-xs text-blue-700 bg-blue-100 p-2 rounded">
-                💡 <strong>팁:</strong> 깊이와 브랜치 수를 줄이면 응답 속도가 빨라지지만 정보가 제한될 수 있습니다.
+                💡 <strong>{t.tip}:</strong> {t.tipMessage}
               </div>
             </div>
           </div>
@@ -689,11 +1215,10 @@ export default function Home() {
               </div>
               <h2 className="text-2xl font-bold text-slate-700 mb-2">TreeRAG</h2>
               <p className="max-w-md text-center text-slate-500">
-                PDF 문서를 업로드하면 AI가 자동으로 구조화하여 분석합니다.<br/>
-                계층적 트리 구조로 문서를 탐색하고 정확한 답변을 제공합니다.
+                {t.welcomeDesc}
               </p>
               <p className="text-xs text-slate-400 mt-4">
-                단축키: <kbd className="px-2 py-1 bg-slate-100 rounded">Ctrl+K</kbd> 새 세션
+                {t.shortcutKey}: <kbd className="px-2 py-1 bg-slate-100 rounded">Ctrl+K</kbd> {t.newSession}
               </p>
             </div>
           ) : (
@@ -753,16 +1278,16 @@ export default function Home() {
                         <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
                           <span className="text-lg">📊</span>
                         </div>
-                        <h4 className="font-semibold text-amber-900">문서 비교 분석</h4>
+                        <h4 className="font-semibold text-amber-900">{t.comparisonAnalysis}</h4>
                       </div>
                       
                       <div className="text-sm text-amber-800 mb-2">
-                        <strong>비교 대상:</strong> {msg.comparison.documents_compared.join(" ↔ ")}
+                        <strong>{t.comparisonTarget}:</strong> {msg.comparison.documents_compared.join(" ↔ ")}
                       </div>
                       
                       {msg.comparison.commonalities && (
                         <div className="mb-3">
-                          <div className="font-medium text-green-700 mb-1">✓ 공통점</div>
+                          <div className="font-medium text-green-700 mb-1">✓ {t.commonalities}</div>
                           <div className="text-sm text-gray-700 bg-white p-2 rounded">
                             {msg.comparison.commonalities}
                           </div>
@@ -771,7 +1296,7 @@ export default function Home() {
                       
                       {msg.comparison.differences && (
                         <div>
-                          <div className="font-medium text-red-700 mb-1">⚠ 차이점</div>
+                          <div className="font-medium text-red-700 mb-1">⚠ {t.differences}</div>
                           <div className="text-sm text-gray-700 bg-white p-2 rounded overflow-x-auto">
                             <ReactMarkdown>{msg.comparison.differences}</ReactMarkdown>
                           </div>
@@ -786,17 +1311,17 @@ export default function Home() {
                         <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
                           <span className="text-lg">🔗</span>
                         </div>
-                        <h4 className="font-semibold text-purple-900">Cross-reference 해결됨</h4>
+                        <h4 className="font-semibold text-purple-900">{t.crossReferenceResolved}</h4>
                       </div>
                       <div className="text-xs text-purple-700 mb-2">
-                        질문에서 {msg.resolved_references.length}개의 참조가 감지되어 자동으로 컨텍스트에 추가되었습니다
+                        {t.crossReferenceDesc.replace('{count}', msg.resolved_references.length.toString())}
                       </div>
                       <div className="space-y-2 max-h-40 overflow-y-auto">
                         {msg.resolved_references.map((ref, i) => (
                           <div key={i} className="bg-white p-2 rounded text-sm">
                             <div className="font-medium text-purple-700">{ref.title}</div>
                             {ref.page_ref && (
-                              <div className="text-xs text-slate-500 mt-1">페이지: {ref.page_ref}</div>
+                              <div className="text-xs text-slate-500 mt-1">{t.page}: {ref.page_ref}</div>
                             )}
                             {ref.summary && (
                               <div className="text-xs text-slate-600 mt-1 line-clamp-2">{ref.summary}</div>
@@ -872,7 +1397,7 @@ export default function Home() {
                 <Loader2 size={18} className="animate-spin text-indigo-600" />
               </div>
               <div className="px-5 py-3 bg-white text-slate-500 text-sm">
-                AI가 규정을 분석하고 있습니다...
+                {t.analyzing}
               </div>
             </div>
           )}
@@ -883,7 +1408,7 @@ export default function Home() {
           <div className="bg-white p-4 md:pb-6 border-t border-slate-100">
             {selectedNode && (
               <div className="max-w-3xl mx-auto mb-3 flex items-center gap-2 text-xs bg-indigo-50 px-4 py-2 rounded-lg border border-indigo-200">
-                <span className="text-indigo-700">📌 선택된 섹션:</span>
+                <span className="text-indigo-700">📌 {t.selectedSection}:</span>
                 <span className="font-medium text-indigo-900">{selectedNode.title}</span>
                 {selectedNode.page_ref && (
                   <span className="text-indigo-600">(p.{selectedNode.page_ref})</span>
@@ -891,10 +1416,10 @@ export default function Home() {
                 <button
                   onClick={() => {
                     setSelectedNode(null);
-                    toast.success("섹션 선택 해제됨");
+                    toast.success(t.sectionDeselected);
                   }}
                   className="ml-auto text-indigo-600 hover:text-indigo-800"
-                  aria-label="섹션 선택 해제"
+                  aria-label={t.sectionDeselected}
                 >
                   ✕
                 </button>
@@ -906,22 +1431,22 @@ export default function Home() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && !isGenerating && handleSendMessage()}
-                placeholder={selectedNode ? `"${selectedNode.title}" 섹션에 대해 질문하기...` : "규정에 대해 궁금한 점을 입력하세요..."}
+                placeholder={selectedNode ? `"${selectedNode.title}" ${t.sectionQuestion}` : t.typeMessage}
                 disabled={isGenerating}
                 className="w-full bg-[#f0f4f9] hover:bg-[#e9eef6] focus:bg-white border-2 border-transparent focus:border-indigo-200 rounded-full pl-6 pr-14 py-4 text-slate-700 placeholder:text-slate-400 focus:outline-none transition-all shadow-sm"
-                aria-label="질문 입력"
+                aria-label={t.typeMessage}
               />
               <button 
                 onClick={handleSendMessage}
                 disabled={!input.trim() || isGenerating}
                 className="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
-                aria-label="전송"
+                aria-label={t.send}
               >
                 <Send size={18} />
               </button>
             </div>
             <div className="text-center mt-2 text-xs text-slate-400">
-              AI 답변은 업로드된 문서에 기반하지만, 중요한 결정 시 반드시 원문을 재확인하시기 바랍니다.
+              {t.disclaimer}
             </div>
           </div>
         )}
@@ -933,7 +1458,7 @@ export default function Home() {
           <div className="p-4 border-b border-slate-100 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <FolderTree size={18} className="text-indigo-600" />
-              <h3 className="font-semibold text-slate-800">문서 구조</h3>
+              <h3 className="font-semibold text-slate-800">{t.treeStructure}</h3>
             </div>
             <button
               onClick={() => {
@@ -941,7 +1466,7 @@ export default function Home() {
                 setSelectedNode(null);
               }}
               className="p-1 hover:bg-slate-100 rounded"
-              aria-label="트리 닫기"
+              aria-label={t.closeTree}
             >
               <PanelLeft size={18} className="text-slate-500" />
             </button>
@@ -950,7 +1475,7 @@ export default function Home() {
           <div className="px-4 py-3 bg-slate-50 border-b border-slate-100">
             <div className="text-sm font-medium text-slate-700 mb-1">{treeData.document_name}</div>
             <div className="text-xs text-slate-500">
-              💡 팁: <span className="font-medium">Shift + 클릭</span>으로 섹션 선택 후 질문하기
+              💡 {t.tipTreeClick}
             </div>
           </div>
 

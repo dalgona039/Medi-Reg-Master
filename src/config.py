@@ -21,3 +21,8 @@ class Config:
 
     RAW_DATA_DIR = "data/raw"
     INDEX_DIR = "data/indices"
+    
+    USE_DEEP_TRAVERSAL = True
+    MAX_TRAVERSAL_DEPTH = 5
+    MAX_BRANCHES_PER_LEVEL = 3
+    FALLBACK_TO_FLAT_CONTEXT = False

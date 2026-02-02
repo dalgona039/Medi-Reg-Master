@@ -2,11 +2,13 @@ import json
 import os
 from typing import Any, List, Dict
 from src.config import Config
+from src.core.tree_traversal import TreeNavigator, format_traversal_results
 
 class TreeRAGReasoner:
-    def __init__(self, index_filenames: List[str]):
+    def __init__(self, index_filenames: List[str], use_deep_traversal: bool = True):
         self.index_trees: List[Dict[str, Any]] = []
         self.index_filenames = index_filenames
+        self.use_deep_traversal = use_deep_traversal
         
         for index_filename in index_filenames:
             path = os.path.join(Config.INDEX_DIR, index_filename)
@@ -21,19 +23,16 @@ class TreeRAGReasoner:
             except IOError as e:
                 raise IOError(f"Failed to read index file {index_filename}: {e}")
 
-    def query(self, user_question: str, enable_comparison: bool = True) -> str:
+
+    def query(self, user_question: str, enable_comparison: bool = True, max_depth: int = 5) -> str:
         if not user_question or not user_question.strip():
             raise ValueError("user_question cannot be empty")
-        
-        combined_context = []
-        for idx, tree in enumerate(self.index_trees):
-            doc_name = self.index_filenames[idx].replace("_index.json", "")
-            combined_context.append({
-                "document": doc_name,
-                "content": tree
-            })
-        
-        context_str = json.dumps(combined_context, ensure_ascii=False)
+        if self.use_deep_traversal:
+            print("🌲 Using deep tree traversal mode")
+            context_str = self._build_context_with_traversal(user_question, max_depth)
+        else:
+            print("📄 Using flat context mode (legacy)")
+            context_str = self._build_flat_context()
         
         is_multi_doc = len(self.index_filenames) > 1
         comparison_prompt = ""
@@ -103,7 +102,7 @@ class TreeRAGReasoner:
 
 📚 **참조 페이지**: [문서명, p.X], [문서명, p.Y-Z]
 
-### 컨텍스트 (다중 문서 인덱스):
+### 컨텍스트:
 {context_str}
 
 ### 질문:
@@ -123,3 +122,30 @@ class TreeRAGReasoner:
         except Exception as e:
             print(f"❌ Query failed: {e}")
             raise
+    
+    def _build_context_with_traversal(self, query: str, max_depth: int) -> str:
+        all_results = []
+        
+        for idx, tree in enumerate(self.index_trees):
+            doc_name = self.index_filenames[idx].replace("_index.json", "")
+            navigator = TreeNavigator(tree, doc_name)
+            relevant_nodes = navigator.search(
+                query=query,
+                max_depth=max_depth,
+                max_branches=3
+            )
+            formatted = format_traversal_results(relevant_nodes, doc_name)
+            all_results.append(formatted)
+        
+        return "\n\n---\n\n".join(all_results)
+    
+    def _build_flat_context(self) -> str:
+        combined_context = []
+        for idx, tree in enumerate(self.index_trees):
+            doc_name = self.index_filenames[idx].replace("_index.json", "")
+            combined_context.append({
+                "document": doc_name,
+                "content": tree
+            })
+        
+        return json.dumps(combined_context, ensure_ascii=False)

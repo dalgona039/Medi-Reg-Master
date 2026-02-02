@@ -220,7 +220,10 @@ async def chat(req: ChatRequest) -> ChatResponse:
             )
     
     try:
-        reasoner = TreeRAGReasoner(selected_indices)
+        reasoner = TreeRAGReasoner(
+            selected_indices,
+            use_deep_traversal=Config.USE_DEEP_TRAVERSAL
+        )
         
         if req.node_context:
             enhanced_question = f"""[컨텍스트: 문서 섹션 "{req.node_context.get('title', '')}"]
@@ -230,9 +233,17 @@ async def chat(req: ChatRequest) -> ChatResponse:
 질문: {req.question}
 
 이 섹션과 관련된 내용을 중심으로 상세히 답변해주세요."""
-            answer = reasoner.query(enhanced_question, enable_comparison=req.enable_comparison)
+            answer = reasoner.query(
+                enhanced_question, 
+                enable_comparison=req.enable_comparison,
+                max_depth=Config.MAX_TRAVERSAL_DEPTH
+            )
         else:
-            answer = reasoner.query(req.question, enable_comparison=req.enable_comparison)
+            answer = reasoner.query(
+                req.question, 
+                enable_comparison=req.enable_comparison,
+                max_depth=Config.MAX_TRAVERSAL_DEPTH
+            )
         
         citations = _extract_citations(answer)
         

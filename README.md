@@ -144,7 +144,7 @@ graph TD
 ## 🚀 Quick Start
 
 ### Prerequisites
-- **Python 3.13+** (3.14 recommended)
+- **Python 3.14.2**
 - **Node.js 20+** (for Next.js frontend)
 - **Gemini API Key** ([Get one here](https://ai.google.dev/))
 
@@ -178,9 +178,9 @@ git clone https://github.com/yourusername/TreeRAG.git
 cd TreeRAG
 
 # 2. Set up Python environment
-conda create -n treerag python=3.14 -y
-conda activate treerag
+conda activate medireg
 pip install -r requirements.txt
+pip install reportlab
 
 # 3. Configure API key
 cp .env.example .env
@@ -306,7 +306,7 @@ curl -X POST http://localhost:8000/api/cache/clear
 #### Backend
 - **FastAPI** - High-performance async API
 - **google.genai** - Gemini 2.5-flash for LLM reasoning
-- **Python 3.14** - Latest language features
+- **Python 3.14.2 (medireg)** - Current runtime
 
 #### Frontend
 - **Next.js 16** - React framework with Turbopack
@@ -375,7 +375,7 @@ TreeRAG uses a proprietary **PageIndex** format that preserves document hierarch
 | **Max Document Pages** | Unlimited (with deep traversal) |
 | **Cache Hit Rate** | 90%+ (for repeated queries) |
 | **Hallucination Detection** | Real-time, sentence-level |
-| **Test Coverage** | 29 passing tests (cache, hallucination) |
+| **Test Coverage** | 125 passing tests (unit + API + core + error handling) |
 
 ---
 
@@ -402,9 +402,18 @@ TreeRAG/
 │   └── app/
 │       └── page.tsx           # Main React UI (1500+ lines)
 ├── tests/
-│   ├── test_cache.py          # Cache unit tests (12 tests)
-│   ├── test_hallucination_detector.py  # Safety tests (17 tests)
-│   └── conftest.py            # Pytest fixtures
+│   ├── test_api.py
+│   ├── test_api_routes.py
+│   ├── test_cache.py
+│   ├── test_cache_normalization.py
+│   ├── test_core_functionality.py
+│   ├── test_error_handling.py
+│   ├── test_integration_real_api.py
+│   ├── test_p1_improvements.py
+│   ├── test_rate_limiter.py
+│   ├── test_reasoner.py
+│   ├── test_hallucination_detector.py
+│   └── conftest.py
 ├── data/
 │   ├── raw/                   # Uploaded PDFs
 │   └── indices/               # Generated PageIndex files
@@ -456,8 +465,9 @@ TreeRAG/
 ### Running Tests
 
 ```bash
-# Run all tests
-pytest tests/ --ignore=tests/test_api.py -v
+# Run all tests (mocked)
+conda activate medireg
+pytest tests/ -v -m "not integration_real"
 
 # Run cache tests only
 pytest tests/test_cache.py -v
@@ -465,14 +475,16 @@ pytest tests/test_cache.py -v
 # Run hallucination detection tests
 pytest tests/test_hallucination_detector.py -v
 
+# Run real API integration tests (costs money)
+REAL_API_TEST=1 pytest tests/test_integration_real_api.py -v -m integration_real
+
 # Evaluate prompt performance
 python evaluate_prompts.py
 ```
 
 **Test Coverage:**
-- ✅ 12 cache tests (LRU, TTL, eviction, hit rate)
-- ✅ 17 hallucination detection tests (confidence scoring, Korean/English support)
-- ⏳ API integration tests (requires .env configuration)
+- ✅ 125 tests (unit + API + core + error handling)
+- ✅ Real API integration tests (optional, guarded by REAL_API_TEST=1)
 
 ---
 
@@ -493,9 +505,9 @@ We welcome contributions! Areas for improvement:
 - [x] Rate limiting (30 queries/min, 10 indexing/min per IP) ✅
 - [x] Docker deployment configuration ✅
 - [x] Hallucination detection with confidence scores ✅
-- [x] Unit tests (cache + hallucination detector) ✅
+- [x] Test suite (125 tests) ✅
+- [x] Integration tests (mocked + optional real API) ✅
 - [ ] Advanced visualizations (charts, graphs)
-- [ ] Integration tests (full API workflow)
 - [ ] Kubernetes orchestration
 
 ---

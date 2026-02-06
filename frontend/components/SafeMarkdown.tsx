@@ -21,8 +21,8 @@ export default function SafeMarkdown({ content, className = '' }: SafeMarkdownPr
       />
     ),
     
-    code: ({ node, inline, ...props }) => 
-      inline ? (
+    code: ({ node, ...props }: any) => 
+      props.inline ? (
         <code className="bg-gray-100 px-1 py-0.5 rounded text-sm font-mono" {...props} />
       ) : (
         <code className="block bg-gray-100 p-3 rounded text-sm font-mono overflow-x-auto" {...props} />

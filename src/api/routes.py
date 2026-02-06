@@ -513,13 +513,15 @@ async def serve_pdf(filename: str):
         )
     
     logger.info(f"[PDF Request] Serving file: {pdf_path}")
-    encoded_filename = quote(decoded_filename.encode('utf-8'))
     
     return FileResponse(
         pdf_path,
         media_type="application/pdf",
         headers={
-            "Content-Disposition": f"inline; filename*=UTF-8''{encoded_filename}"
+            "Content-Disposition": "inline",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET",
+            "Cache-Control": "public, max-age=3600"
         }
     )
 

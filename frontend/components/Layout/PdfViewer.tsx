@@ -16,6 +16,9 @@ export default function PdfViewer({
 }: PdfViewerProps) {
   if (!showPdfViewer || !pdfFile) return null;
 
+  const pdfUrl = `${API_BASE_URL}/pdf/${encodeURIComponent(pdfFile)}#page=${pdfPage}`;
+  console.log('[PDF Viewer] Opening PDF:', pdfUrl);
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl h-[90vh] flex flex-col">
@@ -35,11 +38,11 @@ export default function PdfViewer({
             <X size={20} />
           </button>
         </div>
-        <div className="flex-1 overflow-hidden">
-          <iframe
-            src={`${API_BASE_URL}/pdf/${pdfFile}#page=${pdfPage}`}
-            className="w-full h-full border-0"
-            title="PDF Viewer"
+        <div className="flex-1 overflow-hidden bg-gray-100">
+          <embed
+            src={pdfUrl}
+            type="application/pdf"
+            className="w-full h-full"
           />
         </div>
       </div>

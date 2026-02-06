@@ -97,11 +97,18 @@
   - Volume mounts for persistent data
   - Health checks and auto-restart
 - **Hallucination detection:** AI safety layer
+  - **5-signal semantic similarity algorithm** for accurate detection:
+    1. Citation presence detection (pattern matching for [doc, p.X])
+    2. Weighted word matching (numbers 2.0x, long words 1.5x)
+    3. N-gram overlap analysis (bigrams + trigrams)
+    4. Chunk-level matching (20-char sliding windows)
+    5. Short sentence leniency (<10 chars)
   - Sentence-level confidence scoring (0-100%)
+  - **Optimized threshold (0.3)** with 70% low-confidence trigger
   - Compares generated text against source documents
   - Automatic warning markers ⚠️ for low-confidence statements
+  - Reduced false positives while maintaining AI safety
   - Critical for medical/legal domains requiring accuracy
-  - Real-time reliability assessment with each query
 
 ---
 
@@ -380,7 +387,8 @@ TreeRAG uses a proprietary **PageIndex** format that preserves document hierarch
 | **Supported File Size** | Up to 100MB per PDF |
 | **Max Document Pages** | Unlimited (with deep traversal) |
 | **Cache Hit Rate** | 90%+ (for repeated queries) |
-| **Hallucination Detection** | Real-time, sentence-level |
+| **Hallucination Detection** | Real-time, 5-signal semantic analysis |
+| **Detection Accuracy** | Optimized threshold (0.3), reduced false positives |
 | **Test Coverage** | 125 passing tests (unit + API + core + error handling) |
 
 ---
@@ -402,7 +410,7 @@ TreeRAG/
 │   │   └── models.py          # Pydantic schemas
 │   ├── utils/
 │   │   ├── cache.py           # LRU cache with TTL
-│   │   └── hallucination_detector.py  # AI safety layer
+│   │   └── hallucination_detector.py  # AI safety with 5-signal algorithm
 │   └── config.py              # Configuration
 ├── frontend/
 │   ├── app/

@@ -4,7 +4,6 @@ from pydantic import BaseModel, Field, validator
 
 
 class PageNode(BaseModel):
-    """Schema for tree node structure."""
     id: str = Field(..., description="Unique node identifier")
     title: str = Field(..., min_length=1, description="Node title")
     summary: str = Field(default="", description="Node content summary")

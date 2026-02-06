@@ -220,7 +220,6 @@ cat .gitignore | grep -E "\.env|secrets/"
 - ✅ secrets/ directory
 - ✅ Passwords and tokens in code
 
-See [SECURITY.md](SECURITY.md) for complete security guidelines.
 
 ### Performance & Production Features
 

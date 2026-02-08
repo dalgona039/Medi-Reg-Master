@@ -1,0 +1,38 @@
+{
+  "test_cases": [
+    {
+      "query": "반도체공학과의 교육 목표는 무엇인가?",
+      "relevant_docs": ["root", "node_1", "node_2"],
+      "relevant_scores": {
+        "root": 0.8,
+        "node_1": 1.0,
+        "node_2": 0.9
+      },
+      "expected_citations": ["반도체공학과#p1", "반도체공학과#p2"],
+      "category": "factual",
+      "domain": "academic"
+    },
+    {
+      "query": "생체의공학의 주요 응용 분야는?",
+      "relevant_docs": ["doc2_node1", "doc2_node3"],
+      "relevant_scores": {
+        "doc2_node1": 1.0,
+        "doc2_node3": 0.85
+      },
+      "expected_citations": ["생체의공학개론#p10"],
+      "category": "factual",
+      "domain": "medical"
+    },
+    {
+      "query": "웹 프로그래밍 프로젝트의 핵심 기술 스택은?",
+      "relevant_docs": ["doc3_intro", "doc3_architecture"],
+      "relevant_scores": {
+        "doc3_intro": 1.0,
+        "doc3_architecture": 0.95
+      },
+      "expected_citations": ["웹프로그래밍#p5", "웹프로그래밍#p6"],
+      "category": "technical",
+      "domain": "academic"
+    }
+  ]
+}

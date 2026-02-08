@@ -11,17 +11,6 @@ from .metrics import EvaluationMetrics
 
 @dataclass
 class QueryTestCase:
-    """
-    단일 테스트 케이스
-    
-    Attributes:
-        query: 사용자 질문
-        relevant_docs: 정답 문서 ID 집합 (ground truth)
-        relevant_scores: 문서별 relevance score (NDCG용)
-        expected_citations: 기대되는 인용 (예: {'doc1#p10', 'doc2#p5'})
-        category: 질문 유형 (fact, comparison, multi-hop 등)
-        domain: 도메인 (medical, legal, academic, etc.)
-    """
     query: str
     relevant_docs: List[str]
     relevant_scores: Optional[Dict[str, float]] = None
@@ -35,17 +24,6 @@ class QueryTestCase:
 
 @dataclass
 class BenchmarkResult:
-    """
-    벤치마크 실행 결과
-    
-    Attributes:
-        test_case: 테스트 케이스
-        retrieved_docs: 시스템이 반환한 문서 ID들
-        generated_answer: 생성된 답변
-        latency_ms: 응답 시간 (밀리초)
-        context_size: 사용된 컨텍스트 크기 (tokens)
-        metrics: 계산된 메트릭들
-    """
     test_case: QueryTestCase
     system_name: str
     retrieved_docs: List[str]
@@ -80,7 +58,6 @@ class BenchmarkFramework:
     Usage:
         framework = BenchmarkFramework()
         
-        # 테스트 케이스 추가
         framework.add_test_case(QueryTestCase(
             query="인슐린 저항성 치료는?",
             relevant_docs=['doc1_node5', 'doc1_node12'],
@@ -88,10 +65,8 @@ class BenchmarkFramework:
             category='medical'
         ))
         
-        # 실행
         results = framework.run_benchmark(tree_rag_system, flat_rag_system)
         
-        # 리포트 생성
         report = framework.generate_report(results)
     """
     
@@ -100,27 +75,9 @@ class BenchmarkFramework:
         self.results: List[BenchmarkResult] = []
     
     def add_test_case(self, test_case: QueryTestCase):
-        """테스트 케이스 추가"""
         self.test_cases.append(test_case)
     
     def add_test_cases_from_json(self, json_path: str):
-        """
-        JSON 파일에서 테스트 케이스 일괄 로드
-        
-        Format:
-        {
-            "test_cases": [
-                {
-                    "query": "...",
-                    "relevant_docs": ["doc1", "doc2"],
-                    "relevant_scores": {"doc1": 1.0, "doc2": 0.8},
-                    "expected_citations": ["doc1#p10"],
-                    "category": "medical",
-                    "domain": "medical"
-                }
-            ]
-        }
-        """
         with open(json_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
         
@@ -135,17 +92,6 @@ class BenchmarkFramework:
         test_case: QueryTestCase,
         system_name: str
     ) -> BenchmarkResult:
-        """
-        단일 쿼리 실행 및 평가
-        
-        Args:
-            system: TreeRAGReasoner 또는 FlatRAGBaseline 인스턴스
-            test_case: 테스트 케이스
-            system_name: 'TreeRAG' 또는 'FlatRAG'
-            
-        Returns:
-            BenchmarkResult
-        """
         print(f"  🔍 Query: {test_case.query[:60]}...")
         
         start_time = time.time()
@@ -206,21 +152,6 @@ class BenchmarkFramework:
         save_results: bool = True,
         output_dir: str = "benchmark_results"
     ) -> Dict[str, List[BenchmarkResult]]:
-        """
-        전체 벤치마크 실행
-        
-        Args:
-            tree_rag_system: TreeRAGReasoner 인스턴스
-            flat_rag_system: FlatRAGBaseline 인스턴스 (None이면 TreeRAG만 테스트)
-            save_results: 결과를 JSON으로 저장할지 여부
-            output_dir: 결과 저장 디렉토리
-            
-        Returns:
-            {
-                'TreeRAG': [BenchmarkResult, ...],
-                'FlatRAG': [BenchmarkResult, ...]  # flat_rag_system이 있는 경우만
-            }
-        """
         if not self.test_cases:
             raise ValueError("No test cases added. Use add_test_case() first.")
         
@@ -255,7 +186,6 @@ class BenchmarkFramework:
         return results
     
     def _extract_retrieved_docs(self, metadata: Dict[str, Any]) -> List[str]:
-        """메타데이터에서 검색된 문서 ID 추출"""
         if 'traversal_info' in metadata:
             nodes = metadata['traversal_info'].get('nodes_selected', [])
             return [node.get('node', {}).get('id', '') for node in nodes]
@@ -272,8 +202,6 @@ class BenchmarkFramework:
         generated_answer: str,
         context_size: int
     ) -> Dict[str, float]:
-        """각 결과에 대한 메트릭 계산"""
-        
         relevant_set = set(test_case.relevant_docs)
         metrics = {}
         
@@ -311,7 +239,6 @@ class BenchmarkFramework:
         return metrics
     
     def _save_results(self, results: Dict[str, List[BenchmarkResult]], output_dir: str):
-        """결과를 JSON 파일로 저장"""
         os.makedirs(output_dir, exist_ok=True)
         
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -331,15 +258,6 @@ class BenchmarkFramework:
         self,
         results: Optional[Dict[str, List[BenchmarkResult]]] = None
     ) -> str:
-        """
-        벤치마크 결과 종합 리포트 생성
-        
-        Args:
-            results: run_benchmark()의 결과 (None이면 self.results 사용)
-            
-        Returns:
-            사람이 읽기 쉬운 텍스트 리포트
-        """
         if results is None:
             results = self.results
         
@@ -463,16 +381,6 @@ class BenchmarkFramework:
         results: Optional[Dict[str, List[BenchmarkResult]]] = None,
         output_format: str = 'markdown'
     ) -> str:
-        """
-        TreeRAG vs FlatRAG 비교 테이블 생성
-        
-        Args:
-            results: 벤치마크 결과
-            output_format: 'markdown' 또는 'latex'
-            
-        Returns:
-            비교 테이블 (마크다운 또는 LaTeX 형식)
-        """
         if results is None:
             results = self.results
         
@@ -499,7 +407,6 @@ class BenchmarkFramework:
         flat_metrics: Dict,
         results: Dict
     ) -> str:
-        """마크다운 비교 테이블 생성"""
         table = []
         table.append("| Metric | TreeRAG | FlatRAG | Improvement |")
         table.append("|--------|---------|---------|-------------|")
@@ -542,7 +449,6 @@ class BenchmarkFramework:
         flat_metrics: Dict,
         results: Dict
     ) -> str:
-        """LaTeX 비교 테이블 생성 (논문용)"""
         table = []
         table.append("\\begin{table}[h]")
         table.append("\\centering")

@@ -13,22 +13,18 @@ from src.core.retrieval_model import (
 
 
 class TestRelevanceWeights:
-    """가중치 설정 테스트"""
     
     def test_default_weights(self):
-        """기본 가중치 합 검증"""
         weights = RelevanceWeights()
         
         assert weights.semantic_weight == 0.7
         assert weights.structural_weight == 0.2
         assert weights.contextual_weight == 0.1
         
-        # 합은 1.0
         total = weights.semantic_weight + weights.structural_weight + weights.contextual_weight
         assert abs(total - 1.0) < 1e-6
     
     def test_custom_weights(self):
-        """사용자 정의 가중치"""
         weights = RelevanceWeights(
             semantic_weight=0.8,
             structural_weight=0.15,
@@ -41,7 +37,6 @@ class TestRelevanceWeights:
         assert abs(total - 1.0) < 1e-6
     
     def test_invalid_weights(self):
-        """잘못된 가중치 (합이 1.0이 아닌 경우)"""
         with pytest.raises(ValueError, match="must sum to 1.0"):
             RelevanceWeights(
                 semantic_weight=0.5,
@@ -51,13 +46,10 @@ class TestRelevanceWeights:
 
 
 class TestHierarchicalRetrievalModel:
-    """Formal Retrieval Model 테스트"""
     
     def setup_method(self):
-        """각 테스트 전 실행"""
         self.model = HierarchicalRetrievalModel()
         
-        # 샘플 노드
         self.sample_node = {
             'id': 'node1',
             'title': '혈당 조절 약물',
@@ -74,7 +66,6 @@ class TestHierarchicalRetrievalModel:
         self.sample_query = "인슐린 치료 방법은?"
     
     def test_model_initialization(self):
-        """모델 초기화 테스트"""
         model = HierarchicalRetrievalModel()
         
         assert model.weights.semantic_weight == 0.7
@@ -82,18 +73,14 @@ class TestHierarchicalRetrievalModel:
         assert model.depth_decay == 0.9
     
     def test_semantic_relevance(self):
-        """의미적 유사도 계산 테스트"""
         score = self.model._semantic_relevance(
             self.sample_node,
             self.sample_query,
             None
         )
         
-        # 0~1 범위 확인
+
         assert 0.0 <= score <= 1.0
-        
-        # '인슐린'과 '치료' 키워드가 겹치므로 0 이상
-        # (한글 토큰화 이슈로 인해 0일 수도 있으므로 >= 0.0로 수정)
         assert score >= 0.0
         
         print(f"Semantic relevance: {score:.4f}")
@@ -128,7 +115,6 @@ class TestHierarchicalRetrievalModel:
         print(f"Contextual scores: root→{score_root}, with_parent→{score_with_parent}")
     
     def test_relevance_score_calculation(self):
-        """전체 relevance score 계산 테스트"""
         score, components = self.model.relevance_score(
             node=self.sample_node,
             query=self.sample_query,
@@ -136,16 +122,14 @@ class TestHierarchicalRetrievalModel:
             parent_node=self.sample_parent
         )
         
-        # Score는 0~1 범위
         assert 0.0 <= score <= 1.0
         
-        # Components 확인
         assert 'semantic' in components
         assert 'structural' in components
         assert 'contextual' in components
         assert 'total' in components
         
-        # Total score 검산
+
         expected_total = (
             self.model.weights.semantic_weight * components['semantic'] +
             self.model.weights.structural_weight * components['structural'] +
@@ -162,7 +146,6 @@ class TestHierarchicalRetrievalModel:
         print(f"  Total Score: {score:.4f}")
     
     def test_rank_nodes(self):
-        """노드 랭킹 테스트"""
         nodes = [
             {'id': 'n1', 'title': '인슐린 치료', 'summary': '인슐린 주사 방법'},
             {'id': 'n2', 'title': '식이요법', 'summary': '당뇨병 환자를 위한 식단'},
@@ -175,26 +158,21 @@ class TestHierarchicalRetrievalModel:
             current_depth=1
         )
         
-        # 3개 노드 반환
         assert len(ranked) == 3
         
-        # 각 요소는 (node, score, components) 튜플
         for node, score, components in ranked:
             assert 'id' in node
             assert 0.0 <= score <= 1.0
             assert 'semantic' in components
         
-        # 점수 내림차순 정렬 확인
         scores = [score for _, score, _ in ranked]
         assert scores == sorted(scores, reverse=True)
         
-        # '인슐린 치료'가 가장 높은 점수
         top_node = ranked[0][0]
         print(f"\nTop ranked node: {top_node['title']} (score: {ranked[0][1]:.4f})")
         assert '인슐린' in top_node['title'] or '치료' in top_node['title']
     
     def test_complexity_analysis(self):
-        """복잡도 분석 정보 테스트"""
         analysis = self.model.get_complexity_analysis()
         
         assert 'time_complexity' in analysis
@@ -206,7 +184,6 @@ class TestHierarchicalRetrievalModel:
             print(f"  {key}: {value}")
     
     def test_explain_decision(self):
-        """결정 설명 생성 테스트"""
         explanation = self.model.explain_decision(
             node=self.sample_node,
             query=self.sample_query,
@@ -217,7 +194,6 @@ class TestHierarchicalRetrievalModel:
         assert isinstance(explanation, str)
         assert len(explanation) > 0
         
-        # 주요 키워드 포함 확인
         assert 'Semantic' in explanation
         assert 'Structural' in explanation
         assert 'Contextual' in explanation
@@ -226,23 +202,18 @@ class TestHierarchicalRetrievalModel:
         print(explanation)
     
     def test_different_weight_configurations(self):
-        """다양한 가중치 설정 비교"""
-        # Configuration 1: Semantic 중심 (기본)
         model1 = HierarchicalRetrievalModel(
             weights=RelevanceWeights(0.7, 0.2, 0.1)
         )
         
-        # Configuration 2: Structural 중심
         model2 = HierarchicalRetrievalModel(
             weights=RelevanceWeights(0.3, 0.6, 0.1)
         )
         
-        # Configuration 3: Balanced
         model3 = HierarchicalRetrievalModel(
             weights=RelevanceWeights(0.5, 0.25, 0.25)
         )
         
-        # 같은 노드에 대한 점수 비교
         node = self.sample_node
         query = self.sample_query
         
@@ -255,21 +226,17 @@ class TestHierarchicalRetrievalModel:
         print(f"  Structural-focused (0.3,0.6,0.1): {score2:.4f}")
         print(f"  Balanced (0.5,0.25,0.25): {score3:.4f}")
         
-        # 모든 점수는 0~1 범위
         assert 0.0 <= score1 <= 1.0
         assert 0.0 <= score2 <= 1.0
         assert 0.0 <= score3 <= 1.0
 
 
 class TestFormalModelMathematicalProperties:
-    """수학적 특성 검증"""
     
     def test_score_range_preservation(self):
-        """점수가 항상 [0,1] 범위 유지"""
         model = HierarchicalRetrievalModel()
         
         test_cases = [
-            # (node, query, depth, parent)
             ({'title': 'A', 'summary': 'B'}, 'C', 0, None),
             ({'title': 'Test', 'summary': 'Test test'}, 'Test', 2, {'title': 'Parent'}),
             ({'title': '', 'summary': ''}, 'query', 3, None),  # Empty node
@@ -280,11 +247,9 @@ class TestFormalModelMathematicalProperties:
             assert 0.0 <= score <= 1.0, f"Score {score} out of range for {node['title']}"
     
     def test_weight_impact(self):
-        """가중치 변화가 점수에 미치는 영향"""
         node = {'title': 'Test', 'summary': 'content'}
         query = 'Test'
         
-        # Semantic weight 증가 → semantic component의 영향력 증가
         model_high_semantic = HierarchicalRetrievalModel(
             weights=RelevanceWeights(0.9, 0.05, 0.05)
         )
@@ -300,12 +265,10 @@ class TestFormalModelMathematicalProperties:
         print(f"  High semantic weight (0.9): score={score_high:.4f}")
         print(f"  Low semantic weight (0.3): score={score_low:.4f}")
         
-        # Semantic component가 같다면, high semantic weight가 더 높은 total score
-        if comp_high['semantic'] > 0.5:  # semantic이 높은 경우
+        if comp_high['semantic'] > 0.5:  
             assert score_high >= score_low
     
     def test_monotonicity_depth_penalty(self):
-        """깊이 증가 → structural score 단조감소"""
         model = HierarchicalRetrievalModel(depth_decay=0.9)
         
         scores = []
@@ -317,20 +280,17 @@ class TestFormalModelMathematicalProperties:
         for d, s in enumerate(scores):
             print(f"  depth={d}: structural_score={s:.4f}")
         
-        # 단조감소 확인
         for i in range(len(scores) - 1):
             assert scores[i] >= scores[i+1], f"Not monotonic at depth {i}"
 
 
 def test_formal_model_integration():
-    """전체 통합 테스트"""
     print("\n" + "="*60)
     print("🔬 PHASE 1-2: Formal Retrieval Model Integration Test")
     print("="*60 + "\n")
     
     model = HierarchicalRetrievalModel()
     
-    # 가상의 시나리오: 의료 문서 트리
     nodes = [
         {'id': 'n1', 'title': '심혈관 질환', 'summary': '심장과 혈관 관련 질병'},
         {'id': 'n2', 'title': '고혈압 치료', 'summary': '혈압 강하제와 생활습관 개선'},

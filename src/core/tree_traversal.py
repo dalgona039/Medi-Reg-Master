@@ -2,6 +2,7 @@ import json
 from typing import Dict, Any, List, Optional, Tuple
 from fastapi import HTTPException
 from src.config import Config
+from src.core.error_recovery import ErrorRecoveryFilter
 
 
 class TreeNavigator:
@@ -15,6 +16,7 @@ class TreeNavigator:
         self.relevant_nodes: List[Dict[str, Any]] = []
         self.visited_titles: List[str] = []
         self.node_count = 0
+        self.error_recovery = ErrorRecoveryFilter(llm_weight=0.7, keyword_weight=0.3)
     
     def search(
         self, 
@@ -43,7 +45,7 @@ class TreeNavigator:
         except HTTPException:
             raise
         except Exception as e:
-            print(f"⚠️ Unexpected error during traversal: {e}")
+            print(f"Unexpected error during traversal: {e}")
             raise HTTPException(status_code=500, detail=f"Traversal failed: {str(e)}")
         
         print(f"✅ Found {len(self.relevant_nodes)} relevant sections")
@@ -67,6 +69,7 @@ class TreeNavigator:
     ) -> None:
         """Iterative DFS using stack to avoid recursion limits."""
         stack = [(root, 0, "")]
+        filtered_nodes = []
         
         while stack:
             node, current_depth, parent_context = stack.pop()
@@ -122,6 +125,10 @@ class TreeNavigator:
                                        f"Please use a more specific query or reduce max_depth/max_branches."
                             )
                         stack.append((child, current_depth + 1, new_context))
+            else:
+                filtered_nodes.append(node)
+        
+        self._apply_error_recovery(filtered_nodes, query)
     
     def _evaluate_node_relevance(
         self,
@@ -140,17 +147,18 @@ class TreeNavigator:
         if len(summary) < 20 and len(title) < 10:
             return False
         
-        prompt = f"""
+        def llm_evaluate(node, query, context):
+            prompt = f"""
 당신은 문서 탐색 전문가입니다.
 사용자의 질문에 답하기 위해, 아래 섹션이 관련이 있는지 판단하세요.
 
 ### 컨텍스트 (문서 경로):
-{parent_context}
+{context}
 
 ### 평가 대상 섹션:
-- 제목: {title}
-- 요약: {summary}
-- 페이지: {page_ref}
+- 제목: {node.get('title', '')}
+- 요약: {node.get('summary', '')}
+- 페이지: {node.get('page_ref', '')}
 
 ### 사용자 질문:
 {query}
@@ -163,36 +171,72 @@ class TreeNavigator:
 답변 형식 (JSON):
 {{
   "relevant": true 또는 false,
+  "confidence": 0.0부터 1.0 사이의 수치,
   "reason": "1-2문장 설명"
 }}
 
 JSON만 출력하세요:
 """
+            try:
+                response = Config.CLIENT.models.generate_content(
+                    model=Config.MODEL_NAME,
+                    contents=prompt,
+                    config={"response_mime_type": "application/json"}
+                )
+                
+                if not response.text:
+                    return {
+                        "relevant": False,
+                        "confidence": 0.0,
+                        "reason": "No response"
+                    }
+                
+                result = json.loads(response.text)
+                return {
+                    "relevant": result.get("relevant", False),
+                    "confidence": result.get("confidence", 0.5),
+                    "reason": result.get("reason", "N/A")
+                }
+            except Exception as e:
+                return {
+                    "relevant": False,
+                    "confidence": 0.0,
+                    "reason": f"LLM error: {str(e)}"
+                }
         
-        try:
-            response = Config.CLIENT.models.generate_content(
-                model=Config.MODEL_NAME,
-                contents=prompt,
-                config={"response_mime_type": "application/json"}
-            )
+        decision = self.error_recovery.dual_stage_filter(
+            node, query, parent_context, depth, llm_check_fn=llm_evaluate
+        )
+        
+        if decision.is_relevant:
+            print(f"   → Exploring: {title} (Confidence: {decision.confidence:.2f})")
+        
+        return decision.is_relevant
+    
+    def _apply_error_recovery(self, filtered_nodes: List[Dict[str, Any]], query: str) -> None:
+        """Apply error recovery to recover falsely filtered nodes."""
+        if not filtered_nodes:
+            return
+        
+        over_filtered, recovered_nodes = self.error_recovery.detect_over_filtering(
+            selected_nodes=self.relevant_nodes,
+            filtered_nodes=filtered_nodes,
+            query=query
+        )
+        
+        if over_filtered:
+            print(f"\n⚠️ Over-filtering detected! Recovering {len(recovered_nodes)} critical nodes...")
+            for recovered_node in recovered_nodes:
+                self.relevant_nodes.append({
+                    "node": recovered_node,
+                    "path": f"[RECOVERED] {recovered_node.get('title', 'Untitled')}",
+                    "depth": 1,
+                    "recovery": True
+                })
+                print(f"   📍 Recovered: {recovered_node.get('title', 'Untitled')}")
             
-            if not response.text:
-                print(f"   ⚠️ No response for {title}, marking as not relevant")
-                return False
-            
-            result = json.loads(response.text)
-            is_relevant = result.get("relevant", False)
-            
-            if is_relevant:
-                print(f"   → Exploring: {title} (Reason: {result.get('reason', 'N/A')[:50]}...)")
-            
-            return is_relevant
-            
-        except Exception as e:
-            print(f"⚠️ Relevance check failed: {e}")
-            query_lower = query.lower()
-            title_lower = title.lower()
-            return any(keyword in title_lower for keyword in query_lower.split()[:5])
+            report = self.error_recovery.explain_filtering_decisions()
+            print(f"\n📊 Filtering Report:\n{report[:500]}...")
     
     def _select_most_relevant_children(
         self,

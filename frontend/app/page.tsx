@@ -1,13 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import { UI_TEXT } from "@/constants/ui-text";
-import { useSessions } from "@/hooks/useSessions";
+import { 
+  useSessionStore, 
+  useSettingsStore, 
+  useUIStore, 
+  usePerformanceStore, 
+  useChatStore 
+} from "@/stores";
 import { useUpload } from "@/hooks/useUpload";
-import { useChat } from "@/hooks/useChat";
 import { useTree } from "@/hooks/useTree";
-import { usePerformance } from "@/hooks/usePerformance";
 import Sidebar from "@/components/Sidebar/Sidebar";
 import Header from "@/components/Layout/Header";
 import WelcomeScreen from "@/components/ui/WelcomeScreen";
@@ -19,31 +23,68 @@ import PerformancePanel from "@/components/Settings/PerformancePanel";
 import PdfViewer from "@/components/Layout/PdfViewer";
 
 export default function Home() {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [showPdfViewer, setShowPdfViewer] = useState(false);
-  const [pdfFile, setPdfFile] = useState<string | null>(null);
-  const [pdfPage, setPdfPage] = useState(1);
-  const [showSettings, setShowSettings] = useState(false);
-  const [showPerformance, setShowPerformance] = useState(false);
-  const [useDeepTraversal, setUseDeepTraversal] = useState(true);
-  const [maxDepth, setMaxDepth] = useState(5);
-  const [maxBranches, setMaxBranches] = useState(3);
-  const [domainTemplate, setDomainTemplate] = useState("general");
-  const [language, setLanguage] = useState("ko");
-
-  const { 
-    sessions, 
-    setSessions, 
-    currentSessionId, 
-    setCurrentSessionId, 
-    currentSession,
-    createNewSession, 
-    deleteSession 
-  } = useSessions();
-
-  const { performanceMetrics, setPerformanceMetrics } = usePerformance();
-
+  // ===== Zustand Stores (No Prop Drilling!) =====
+  
+  // Session store
+  const sessions = useSessionStore(state => state.sessions);
+  const currentSessionId = useSessionStore(state => state.currentSessionId);
+  const setSessions = useSessionStore(state => state.setSessions);
+  const setCurrentSessionId = useSessionStore(state => state.setCurrentSessionId);
+  const createNewSession = useSessionStore(state => state.createNewSession);
+  const deleteSession = useSessionStore(state => state.deleteSession);
+  const currentSession = sessions.find(s => s.id === currentSessionId);
+  
+  // Settings store
+  const language = useSettingsStore(state => state.language);
+  const domainTemplate = useSettingsStore(state => state.domainTemplate);
+  const useDeepTraversal = useSettingsStore(state => state.useDeepTraversal);
+  const maxDepth = useSettingsStore(state => state.maxDepth);
+  const maxBranches = useSettingsStore(state => state.maxBranches);
+  const setLanguage = useSettingsStore(state => state.setLanguage);
+  const setDomainTemplate = useSettingsStore(state => state.setDomainTemplate);
+  const setUseDeepTraversal = useSettingsStore(state => state.setUseDeepTraversal);
+  const setMaxDepth = useSettingsStore(state => state.setMaxDepth);
+  const setMaxBranches = useSettingsStore(state => state.setMaxBranches);
+  
+  // UI store
+  const isSidebarOpen = useUIStore(state => state.isSidebarOpen);
+  const showSettings = useUIStore(state => state.showSettings);
+  const showPerformance = useUIStore(state => state.showPerformance);
+  const showPdfViewer = useUIStore(state => state.showPdfViewer);
+  const pdfFile = useUIStore(state => state.pdfFile);
+  const pdfPage = useUIStore(state => state.pdfPage);
+  const copiedId = useUIStore(state => state.copiedId);
+  const setSidebarOpen = useUIStore(state => state.setSidebarOpen);
+  const setShowSettings = useUIStore(state => state.setShowSettings);
+  const setShowPerformance = useUIStore(state => state.setShowPerformance);
+  const setShowPdfViewer = useUIStore(state => state.setShowPdfViewer);
+  const openPdf = useUIStore(state => state.openPdf);
+  const setCopiedId = useUIStore(state => state.setCopiedId);
+  
+  // Wrapper for language change (component expects string, store uses union type)
+  const handleLanguageChange = (value: string) => {
+    if (value === 'ko' || value === 'en') {
+      setLanguage(value);
+    }
+  };
+  
+  // Performance store
+  const performanceMetrics = usePerformanceStore(state => ({
+    totalQueries: state.totalQueries,
+    avgResponseTime: state.avgResponseTime,
+    avgContextSize: state.avgContextSize,
+    deepTraversalUsage: state.deepTraversalUsage,
+    queriesHistory: state.queriesHistory,
+  }));
+  
+  // Chat store
+  const input = useChatStore(state => state.input);
+  const isGenerating = useChatStore(state => state.isGenerating);
+  const setInput = useChatStore(state => state.setInput);
+  const sendMessage = useChatStore(state => state.sendMessage);
+  
+  // ===== Legacy Hooks (to be migrated later) =====
+  
   const { 
     isUploading, 
     uploadProgress, 
@@ -61,28 +102,13 @@ export default function Home() {
     loadTreeStructure,
     handleNodeClick
   } = useTree();
-
-  const { 
-    input, 
-    setInput, 
-    isGenerating, 
-    handleSendMessage 
-  } = useChat(
-    sessions,
-    setSessions,
-    currentSessionId,
-    currentSession,
-    selectedNode,
-    useDeepTraversal,
-    maxDepth,
-    maxBranches,
-    domainTemplate,
-    language,
-    setPerformanceMetrics
-  );
-
+  
+  // ===== Computed Values =====
+  
   const t = UI_TEXT[language as keyof typeof UI_TEXT] || UI_TEXT.ko;
-
+  
+  // ===== Effects =====
+  
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "k") {
@@ -94,51 +120,32 @@ export default function Home() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [createNewSession]);
 
+  // ===== Event Handlers =====
+
   const handleCitationClick = (citation: string) => {
     const match = citation.match(/(.+?),\s*p\.(\d+)/);
     if (match) {
       const [_, docName, pageNum] = match;
       const citationDocName = docName.trim();
       
-      console.log('[Citation Click] 원본 citation:', citation);
-      console.log('[Citation Click] 추출된 문서명:', citationDocName);
-      console.log('[Citation Click] 현재 세션:', currentSession);
-      console.log('[Citation Click] originalFilenames:', currentSession?.originalFilenames);
-      
       let filename = `${citationDocName}.pdf`;
       
       if (currentSession?.originalFilenames && currentSession.originalFilenames.length > 0) {
-        console.log('[Citation Click] originalFilenames 사용 중...');
-        
         const matchingFile = currentSession.originalFilenames.find(originalFilename => {
           const nameWithoutExt = originalFilename.replace('.pdf', '');
-          const matches = nameWithoutExt === citationDocName || 
+          return nameWithoutExt === citationDocName || 
                  nameWithoutExt.includes(citationDocName) || 
                  citationDocName.includes(nameWithoutExt);
-          console.log(`[Citation Click] 비교: "${nameWithoutExt}" vs "${citationDocName}" => ${matches}`);
-          return matches;
         });
         
         if (matchingFile) {
-          console.log('[Citation Click] 매칭된 파일:', matchingFile);
           filename = matchingFile;
-        } else {
-          console.log('[Citation Click] 매칭 실패, 단일 문서 체크...');
-          if (currentSession.originalFilenames.length === 1) {
-            filename = currentSession.originalFilenames[0];
-            console.log('[Citation Click] 단일 문서 사용:', filename);
-          }
+        } else if (currentSession.originalFilenames.length === 1) {
+          filename = currentSession.originalFilenames[0];
         }
-      } else {
-        console.log('[Citation Click] originalFilenames 없음, 기본 파일명 사용');
       }
       
-      console.log('[Citation Click] 최종 파일명:', filename);
-      console.log('[Citation Click] 요청 URL:', `/api/pdf/${encodeURIComponent(filename)}`);
-      
-      setPdfFile(filename);
-      setPdfPage(parseInt(pageNum));
-      setShowPdfViewer(true);
+      openPdf(filename, parseInt(pageNum));
       toast.success(`${t.pdfOpen}: ${filename} (p.${pageNum})`);
     }
   };
@@ -172,7 +179,7 @@ export default function Home() {
         
         if (msg.citations && msg.citations.length > 0) {
           markdown += `**출처:**\n`;
-          msg.citations.forEach(citation => {
+          msg.citations.forEach((citation: string) => {
             markdown += `- ${citation}\n`;
           });
           markdown += `\n`;
@@ -180,7 +187,7 @@ export default function Home() {
         
         if (msg.resolved_references && msg.resolved_references.length > 0) {
           markdown += `**Cross-reference 해결됨:**\n`;
-          msg.resolved_references.forEach(ref => {
+          msg.resolved_references.forEach((ref: { title: string; page_ref?: string }) => {
             markdown += `- ${ref.title}`;
             if (ref.page_ref) markdown += ` (${ref.page_ref})`;
             markdown += `\n`;
@@ -223,6 +230,13 @@ export default function Home() {
     toast.success(t.markdownSaved);
   };
 
+  const handleDeleteSession = (sessionId: string) => {
+    deleteSession(sessionId);
+    toast.success(t.sessionDeleted);
+  };
+
+  // ===== Render =====
+
   return (
     <div className="flex h-screen bg-white font-sans text-slate-800 overflow-hidden">
       <Toaster position="top-center" />
@@ -231,10 +245,10 @@ export default function Home() {
         isOpen={isSidebarOpen}
         sessions={sessions}
         currentSessionId={currentSessionId}
-        onClose={() => setIsSidebarOpen(false)}
+        onClose={() => setSidebarOpen(false)}
         onNewSession={createNewSession}
         onSelectSession={setCurrentSessionId}
-        onDeleteSession={deleteSession}
+        onDeleteSession={handleDeleteSession}
         t={t}
       />
 
@@ -247,7 +261,7 @@ export default function Home() {
           fileInputRef={fileInputRef}
           showPerformance={showPerformance}
           showSettings={showSettings}
-          onToggleSidebar={() => setIsSidebarOpen(true)}
+          onToggleSidebar={() => setSidebarOpen(true)}
           onFileUpload={(e) => handleFileUploadAndIndex(e, t)}
           onTogglePerformance={() => setShowPerformance(!showPerformance)}
           onToggleSettings={() => setShowSettings(!showSettings)}
@@ -272,7 +286,7 @@ export default function Home() {
           maxDepth={maxDepth}
           maxBranches={maxBranches}
           onDomainChange={setDomainTemplate}
-          onLanguageChange={setLanguage}
+          onLanguageChange={handleLanguageChange}
           onDeepTraversalChange={setUseDeepTraversal}
           onMaxDepthChange={setMaxDepth}
           onMaxBranchesChange={setMaxBranches}
@@ -289,7 +303,7 @@ export default function Home() {
             isGenerating={isGenerating}
             selectedNode={selectedNode}
             onInputChange={setInput}
-            onSendMessage={handleSendMessage}
+            onSendMessage={sendMessage}
             onCitationClick={handleCitationClick}
             onCopy={copyToClipboard}
             onDeselectNode={() => {

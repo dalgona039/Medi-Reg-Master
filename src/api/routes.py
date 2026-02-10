@@ -3,7 +3,7 @@ import shutil
 import json
 import uuid
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 from fastapi import APIRouter, UploadFile, File, HTTPException, status, Request
 from fastapi.responses import JSONResponse, FileResponse
 from slowapi import Limiter
@@ -824,3 +824,261 @@ async def get_node_context(
             status_code=500,
             detail=f"Failed to get node context: {str(e)}"
         )
+
+
+# ==================== Benchmark Endpoints ====================
+
+@router.get("/benchmark/domains")
+async def list_available_domains():
+    """List all available benchmark domains."""
+    from src.core.domain_benchmark import DocumentDomain
+    
+    return {
+        "status": "success",
+        "domains": [d.value for d in DocumentDomain]
+    }
+
+
+@router.post("/benchmark/{document_name}/classify")
+async def classify_document_domain(document_name: str):
+    """
+    Classify the domain of an indexed document.
+    
+    Analyzes document content and determines the most likely domain
+    (medical, legal, technical, etc.).
+    """
+    from src.core.domain_benchmark import DomainClassifier
+    
+    index_path = os.path.join(Config.INDEX_DIR, f"{document_name}_index.json")
+    
+    if not os.path.exists(index_path):
+        raise HTTPException(
+            status_code=404,
+            detail=f"Document '{document_name}' not found"
+        )
+    
+    try:
+        with open(index_path, 'r', encoding='utf-8') as f:
+            tree = json.load(f)
+        
+        # Extract text for classification
+        title = tree.get("title", document_name)
+        summary = tree.get("summary", "")
+        
+        # Collect child summaries for more context
+        children_text = []
+        for child in tree.get("children", [])[:10]:
+            children_text.append(child.get("summary", ""))
+        
+        full_text = f"{summary} {' '.join(children_text)}"
+        
+        # Classify using LLM for better accuracy
+        domain, confidence = DomainClassifier.classify_with_llm(full_text, title)
+        
+        # Also get keyword-based classification for comparison
+        keyword_domain, keyword_conf = DomainClassifier.classify(full_text, title)
+        
+        return {
+            "status": "success",
+            "document_name": document_name,
+            "classification": {
+                "domain": domain.value,
+                "confidence": round(confidence, 4),
+                "method": "llm"
+            },
+            "keyword_classification": {
+                "domain": keyword_domain.value,
+                "confidence": round(keyword_conf, 4),
+                "method": "keyword"
+            }
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Classification failed: {str(e)}"
+        )
+
+
+@router.post("/benchmark/{document_name}/run")
+async def run_benchmark(
+    document_name: str,
+    domain: Optional[str] = None,
+    use_reasoning: bool = False
+):
+    """
+    Run benchmark evaluation for a document.
+    
+    If domain is not specified, it will be auto-detected.
+    Generates benchmark questions and evaluates TreeRAG performance.
+    """
+    from src.core.domain_benchmark import (
+        DocumentDomain, DomainClassifier, DomainBenchmark
+    )
+    
+    index_path = os.path.join(Config.INDEX_DIR, f"{document_name}_index.json")
+    
+    if not os.path.exists(index_path):
+        raise HTTPException(
+            status_code=404,
+            detail=f"Document '{document_name}' not found"
+        )
+    
+    try:
+        # Determine domain
+        if domain:
+            doc_domain = DocumentDomain.from_string(domain)
+        else:
+            with open(index_path, 'r', encoding='utf-8') as f:
+                tree = json.load(f)
+            title = tree.get("title", document_name)
+            summary = tree.get("summary", "")
+            doc_domain, _ = DomainClassifier.classify(summary, title)
+        
+        # Run benchmark
+        benchmark = DomainBenchmark()
+        report = benchmark.run_benchmark(
+            document_name=document_name,
+            domain=doc_domain,
+            use_reasoning=use_reasoning
+        )
+        
+        # Save report
+        report_path = benchmark.save_report(report)
+        
+        return {
+            "status": "success",
+            "report": report.to_dict(),
+            "report_path": report_path
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Benchmark failed: {str(e)}"
+        )
+
+
+@router.get("/benchmark/{document_name}/compare")
+async def compare_domain_performance(document_name: str):
+    """
+    Compare benchmark performance across domains for a document.
+    
+    Returns rankings by accuracy, response time, and hallucination rate.
+    """
+    from src.core.domain_benchmark import DomainBenchmark
+    
+    benchmark = DomainBenchmark()
+    historical = benchmark.load_historical_reports(document_name=document_name)
+    
+    if not historical:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No benchmark reports found for '{document_name}'"
+        )
+    
+    # Load reports into benchmark results
+    for report in historical:
+        benchmark.results[document_name].append(report)
+    
+    comparison = benchmark.compare_domains(document_name)
+    
+    return {
+        "status": "success",
+        "comparison": comparison
+    }
+
+
+@router.get("/benchmark/reports")
+async def list_benchmark_reports(
+    document_name: Optional[str] = None,
+    domain: Optional[str] = None
+):
+    """List all available benchmark reports."""
+    from src.core.domain_benchmark import DomainBenchmark, DocumentDomain
+    
+    benchmark = DomainBenchmark()
+    
+    doc_domain = DocumentDomain.from_string(domain) if domain else None
+    reports = benchmark.load_historical_reports(
+        document_name=document_name,
+        domain=doc_domain
+    )
+    
+    return {
+        "status": "success",
+        "report_count": len(reports),
+        "reports": [
+            {
+                "document_name": r.document_name,
+                "domain": r.domain.value,
+                "accuracy": r.accuracy,
+                "total_questions": r.total_questions,
+                "run_timestamp": r.run_timestamp
+            }
+            for r in reports
+        ]
+    }
+
+
+@router.post("/benchmark/dataset/{domain}/add")
+async def add_benchmark_question(
+    domain: str,
+    question: str,
+    expected_answer: str,
+    difficulty: str = "medium"
+):
+    """Add a new benchmark question to a domain dataset."""
+    from src.core.domain_benchmark import BenchmarkDataset, DocumentDomain
+    
+    doc_domain = DocumentDomain.from_string(domain)
+    
+    if doc_domain == DocumentDomain.GENERAL and domain != "general":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid domain: {domain}"
+        )
+    
+    try:
+        dataset = BenchmarkDataset()
+        new_question = dataset.add_question(
+            domain=doc_domain,
+            question=question,
+            expected_answer=expected_answer,
+            difficulty=difficulty
+        )
+        
+        # Save the updated dataset
+        all_questions = dataset.questions[domain]
+        dataset.save_dataset(doc_domain, all_questions)
+        
+        return {
+            "status": "success",
+            "question_id": new_question.id,
+            "message": f"Question added to {domain} benchmark dataset"
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to add question: {str(e)}"
+        )
+
+
+@router.get("/benchmark/dataset/{domain}")
+async def get_benchmark_dataset(domain: str):
+    """Get all benchmark questions for a domain."""
+    from src.core.domain_benchmark import BenchmarkDataset, DocumentDomain
+    
+    doc_domain = DocumentDomain.from_string(domain)
+    
+    dataset = BenchmarkDataset()
+    questions = dataset.load_dataset(doc_domain)
+    
+    return {
+        "status": "success",
+        "domain": domain,
+        "question_count": len(questions),
+        "questions": [q.to_dict() for q in questions]
+    }
+

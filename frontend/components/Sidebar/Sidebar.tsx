@@ -1,7 +1,8 @@
-import { useState } from "react";
-import { Plus, PanelLeftClose, Search, X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, PanelLeftClose, Search, X, FolderOpen } from "lucide-react";
 import SessionItem from "./SessionItem";
 import type { ChatSession } from "@/lib/types";
+import { api } from "@/lib/api";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -11,6 +12,7 @@ interface SidebarProps {
   onNewSession: () => void;
   onSelectSession: (id: string) => void;
   onDeleteSession: (id: string, e: React.MouseEvent) => void;
+  onLoadExistingIndex?: (indexFilename: string) => void;
   t: any;
 }
 
@@ -22,9 +24,25 @@ export default function Sidebar({
   onNewSession, 
   onSelectSession, 
   onDeleteSession,
+  onLoadExistingIndex,
   t 
 }: SidebarProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [existingIndices, setExistingIndices] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (isOpen) {
+      const fetchIndices = async () => {
+        try {
+          const data = await api.listIndices();
+          setExistingIndices(data.indices);
+        } catch (error) {
+          console.error("Failed to fetch existing indices:", error);
+        }
+      };
+      fetchIndices();
+    }
+  }, [isOpen]);
 
   const filteredSessions = sessions.filter(session => {
     if (!searchQuery.trim()) return true;
@@ -105,6 +123,29 @@ export default function Sidebar({
         {sessions.length > 0 && searchQuery && filteredSessions.length === 0 && (
           <div className="text-center text-slate-400 text-xs mt-10">
             {t.noSearchResults}
+          </div>
+        )}
+
+        {existingIndices.length > 0 && onLoadExistingIndex && !searchQuery && (
+          <div className="mt-6 px-2">
+            <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 px-2 mb-2">
+              <FolderOpen size={14} />
+              <span>{t.existingDocuments || "기존 문서"}</span>
+            </div>
+            {existingIndices.map((indexFile) => {
+              const docName = indexFile.replace('_index.json', '').split('_').slice(1).join(' ');
+              return (
+                <button
+                  key={indexFile}
+                  onClick={() => onLoadExistingIndex(indexFile)}
+                  className="w-full px-3 py-2 text-left rounded-lg hover:bg-slate-200 transition-colors mb-1 group"
+                >
+                  <p className="text-sm text-slate-700 group-hover:text-indigo-600 truncate">
+                    {docName}
+                  </p>
+                </button>
+              );
+            })}
           </div>
         )}
       </div>

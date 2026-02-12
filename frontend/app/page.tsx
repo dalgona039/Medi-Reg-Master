@@ -89,7 +89,8 @@ export default function Home() {
     isUploading, 
     uploadProgress, 
     fileInputRef, 
-    handleFileUploadAndIndex 
+    handleFileUploadAndIndex,
+    loadExistingIndex
   } = useUpload(setSessions, setCurrentSessionId);
 
   const {
@@ -249,6 +250,7 @@ export default function Home() {
         onNewSession={createNewSession}
         onSelectSession={setCurrentSessionId}
         onDeleteSession={handleDeleteSession}
+        onLoadExistingIndex={(indexFilename) => loadExistingIndex(indexFilename, t)}
         t={t}
       />
 
@@ -294,7 +296,10 @@ export default function Home() {
         />
 
         {!currentSessionId ? (
-          <WelcomeScreen t={t} />
+          <WelcomeScreen 
+            t={t} 
+            onLoadExistingIndex={(indexFilename) => loadExistingIndex(indexFilename, t)}
+          />
         ) : (
           <ChatPanel
             currentSessionId={currentSessionId}

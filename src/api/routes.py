@@ -2,12 +2,14 @@ import os
 import shutil
 import json
 import uuid
+import logging
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 from fastapi import APIRouter, UploadFile, File, HTTPException, status, Request
 from fastapi.responses import JSONResponse, FileResponse
 from slowapi import Limiter
 from slowapi.util import get_remote_address
+import aiofiles
 from src.config import Config
 from src.core.indexer import RegulatoryIndexer
 from src.core.reasoner import TreeRAGReasoner
@@ -17,6 +19,7 @@ from src.utils.file_validator import validate_uploaded_file
 from src.utils.hallucination_detector import HallucinationDetector
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 def get_real_ip(request: Request) -> str:
     TRUSTED_PROXIES = {'127.0.0.1', 'localhost'}
@@ -34,7 +37,7 @@ def get_real_ip(request: Request) -> str:
 
 limiter = Limiter(key_func=get_real_ip)
 
-def _route_documents(question: str, available_indices: List[str]) -> List[str]:
+async def _route_documents(question: str, available_indices: List[str]) -> List[str]:
     if not available_indices:
         raise ValueError("No indexed documents available")
     
@@ -45,8 +48,9 @@ def _route_documents(question: str, available_indices: List[str]) -> List[str]:
     for filename in available_indices:
         filepath = os.path.join(Config.INDEX_DIR, filename)
         try:
-            with open(filepath, 'r', encoding='utf-8') as f:
-                tree = json.load(f)
+            async with aiofiles.open(filepath, 'r', encoding='utf-8') as f:
+                content = await f.read()
+                tree = json.loads(content)
                 doc_name = filename.replace("_index.json", "")
                 summary = tree.get("summary", tree.get("title", doc_name))
                 doc_summaries.append(f"- {doc_name}: {summary[:200]}")
@@ -102,14 +106,14 @@ def _route_documents(question: str, available_indices: List[str]) -> List[str]:
                     break
         
         if not selected_files:
-            print(f"⚠️ Router couldn't match documents, using all")
+            logger.warning("Router couldn't match documents, using all")
             return available_indices
         
-        print(f"📍 Router selected {len(selected_files)}/{len(available_indices)} documents: {selected_files}")
+        logger.info(f"Router selected {len(selected_files)}/{len(available_indices)} documents: {selected_files}")
         return selected_files
         
     except Exception as e:
-        print(f"⚠️ Router failed: {e}, using all documents")
+        logger.warning(f"Router failed: {e}, using all documents")
         return available_indices
 
 @router.get("/")
@@ -122,7 +126,7 @@ ALLOWED_MIME_TYPES = {'application/pdf'}
 
 @router.post("/upload")
 async def upload_file(file: UploadFile = File(...)) -> Dict[str, Any]:
-    print(f"[DEBUG] Upload request - filename: {file.filename}")
+    logger.debug(f"Upload request - filename: {file.filename}")
     
     if not file.filename:
         raise HTTPException(
@@ -189,7 +193,7 @@ async def upload_file(file: UploadFile = File(...)) -> Dict[str, Any]:
         with open(file_path, "wb") as buffer:
             buffer.write(contents)
         
-        print(f"[DEBUG] File saved successfully: {unique_filename}")
+        logger.debug(f"File saved successfully: {unique_filename}")
         return {
             "message": "File uploaded successfully",
             "filename": unique_filename,
@@ -200,7 +204,7 @@ async def upload_file(file: UploadFile = File(...)) -> Dict[str, Any]:
     except HTTPException:
         raise
     except Exception as e:
-        print(f"[ERROR] Upload failed: {str(e)}")
+        logger.error(f"Upload failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Upload failed due to server error"
@@ -209,7 +213,7 @@ async def upload_file(file: UploadFile = File(...)) -> Dict[str, Any]:
 @router.post("/index")
 @limiter.limit("10/minute")
 async def create_index(request: Request, req: IndexRequest) -> Dict[str, str]:
-    print(f"[DEBUG] Index request for filename: {req.filename}")
+    logger.debug(f"Index request for filename: {req.filename}")
     
     safe_filename = Path(req.filename).name
     if not safe_filename or safe_filename != req.filename:
@@ -234,12 +238,12 @@ async def create_index(request: Request, req: IndexRequest) -> Dict[str, str]:
             detail="Invalid file path"
         )
     
-    print(f"[DEBUG] Looking for PDF at: {pdf_path}")
-    print(f"[DEBUG] File exists: {os.path.exists(pdf_path)}")
+    logger.debug(f"Looking for PDF at: {pdf_path}")
+    logger.debug(f"File exists: {os.path.exists(pdf_path)}")
     
     if not os.path.exists(pdf_path):
         available_files = os.listdir(Config.RAW_DATA_DIR)
-        print(f"[DEBUG] Available files in RAW_DATA_DIR: {available_files}")
+        logger.debug(f"Available files in RAW_DATA_DIR: {available_files}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"PDF file not found: {safe_filename}"
@@ -292,7 +296,7 @@ async def chat(request: Request, req: ChatRequest) -> ChatResponse:
     
     if req.index_filenames and len(req.index_filenames) > 0:
         selected_indices = req.index_filenames
-        print(f"📌 Using user-specified documents: {selected_indices}")
+        logger.info(f"Using user-specified documents: {selected_indices}")
     else:
         available_indices = [
             f for f in os.listdir(Config.INDEX_DIR)
@@ -305,7 +309,7 @@ async def chat(request: Request, req: ChatRequest) -> ChatResponse:
                 detail="No indexed documents found. Please upload and index documents first."
             )
         
-        selected_indices = _route_documents(req.question, available_indices)
+        selected_indices = await _route_documents(req.question, available_indices)
     
     for index_filename in selected_indices:
         if not index_filename.endswith("_index.json"):
@@ -389,7 +393,7 @@ async def chat(request: Request, req: ChatRequest) -> ChatResponse:
                     "overall_confidence": detection_result["overall_confidence"],
                     "threshold": detector.confidence_threshold
                 }
-                print(f"⚠️ Hallucination detected: {low_conf_count}/{total_count} sentences low confidence (overall: {detection_result['overall_confidence']:.2f})")
+                logger.warning(f"Hallucination detected: {low_conf_count}/{total_count} sentences low confidence (overall: {detection_result['overall_confidence']:.2f})")
         
         return ChatResponse(
             answer=answer, 
@@ -421,7 +425,7 @@ async def list_indices() -> Dict[str, List[str]]:
             f for f in os.listdir(Config.INDEX_DIR)
             if f.endswith("_index.json") and os.path.isfile(os.path.join(Config.INDEX_DIR, f))
         ]
-        print(f"[DEBUG] Available indices: {files}")
+        logger.debug(f"Available indices: {files}")
         return {"indices": sorted(files)}
     except Exception as e:
         raise HTTPException(
@@ -440,7 +444,7 @@ async def list_pdfs() -> Dict[str, List[str]]:
             f for f in os.listdir(Config.RAW_DATA_DIR)
             if f.lower().endswith('.pdf') and os.path.isfile(os.path.join(Config.RAW_DATA_DIR, f))
         ]
-        print(f"[DEBUG] Available PDFs: {files}")
+        logger.debug(f"Available PDFs: {files}")
         return {"pdfs": sorted(files)}
     except Exception as e:
         raise HTTPException(
@@ -465,8 +469,9 @@ async def get_tree_structure(index_filename: str) -> TreeResponse:
         )
     
     try:
-        with open(index_path, 'r', encoding='utf-8') as f:
-            tree_data = json.load(f)
+        async with aiofiles.open(index_path, 'r', encoding='utf-8') as f:
+            content = await f.read()
+            tree_data = json.loads(content)
         
         doc_name = index_filename.replace("_index.json", "")
         

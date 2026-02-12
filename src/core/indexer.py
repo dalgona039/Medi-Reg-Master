@@ -2,11 +2,14 @@ import json
 import os
 import re
 import time
+import logging
 from typing import Dict, Any, Generator
 from pypdf import PdfReader
 from pydantic import ValidationError
 from src.config import Config
 from src.models.schemas import PageNode
+
+logger = logging.getLogger(__name__)
 
 class RegulatoryIndexer:
     def __init__(self) -> None:
@@ -27,7 +30,7 @@ class RegulatoryIndexer:
         
         reader = PdfReader(pdf_path)
         total_pages = len(reader.pages)
-        print(f"📄 PDF 로딩 중: {os.path.basename(pdf_path)} ({total_pages} pages)")
+        logger.info(f"PDF loading: {os.path.basename(pdf_path)} ({total_pages} pages)")
         
         for i, page in enumerate(reader.pages):
             text = page.extract_text()
@@ -67,7 +70,7 @@ class RegulatoryIndexer:
         if not doc_title:
             raise ValueError("doc_title cannot be empty")
         
-        print(f"🏗️ Streaming Indexing started for: {doc_title} (Model: {Config.MODEL_NAME})")
+        logger.info(f"Streaming Indexing started for: {doc_title} (Model: {Config.MODEL_NAME})")
         
         chunk_parts = []
         page_count = 0
@@ -84,7 +87,7 @@ class RegulatoryIndexer:
         
         chunk_text = "".join(chunk_parts)
         
-        print(f"📊 Processing {page_count} pages (chunk size: {len(chunk_text)} chars)")
+        logger.info(f"Processing {page_count} pages (chunk size: {len(chunk_text)} chars)")
         
         return self.create_index(doc_title, chunk_text)
 
@@ -92,7 +95,7 @@ class RegulatoryIndexer:
         if not doc_title or not full_text:
             raise ValueError("doc_title and full_text cannot be empty")
         
-        print(f"🏗️ Indexing started for: {doc_title} (Model: {Config.MODEL_NAME})")
+        logger.info(f"Indexing started for: {doc_title} (Model: {Config.MODEL_NAME})")
         
         prompt = f"""
         You are a Legal & Regulatory Expert AI.
@@ -120,41 +123,54 @@ class RegulatoryIndexer:
                     config=self.generation_config
                 )
                 cleaned_text = self._clean_markdown_json(response.text)
+                logger.debug(f"API Response (first 500 chars): {cleaned_text[:500]}")
                 result = json.loads(cleaned_text)
+                logger.debug(f"Parsed JSON type: {type(result).__name__}")
+                if isinstance(result, list):
+                    logger.debug(f"List length: {len(result)}")
+                    if len(result) > 0:
+                        logger.debug(f"First item type: {type(result[0]).__name__}")
+                        if isinstance(result[0], dict):
+                            logger.debug("Converting list to dict (using first element)")
+                            result = result[0]
+                        else:
+                            raise ValueError("List does not contain a dictionary")
+                    else:
+                        raise ValueError("Empty list returned")
                 
                 if not isinstance(result, dict):
                     raise ValueError("Root JSON must be a dictionary")
                 
                 try:
                     PageNode.model_validate(result)
-                    print(f"✅ Indexing completed and validated for: {doc_title}")
+                    logger.info(f"Indexing completed and validated for: {doc_title}")
                 except ValidationError as ve:
-                    print(f"⚠️ Pydantic validation failed: {ve}")
+                    logger.warning(f"Pydantic validation failed: {ve}")
                     raise ValueError(f"Schema validation failed: {ve}")
                 
                 return result
             except json.JSONDecodeError as e:
-                print(f"❌ JSON parsing failed: {e}")
+                logger.error(f"JSON parsing failed: {e}")
                 if attempt < max_retries - 1:
-                    print(f"⏳ Retrying ({attempt + 1}/{max_retries})...")
+                    logger.info(f"Retrying ({attempt + 1}/{max_retries})...")
                     time.sleep(retry_delay)
                     continue
                 return {}
             except ValueError as e:
-                print(f"❌ Invalid JSON structure: {e}")
+                logger.error(f"Invalid JSON structure: {e}")
                 if attempt < max_retries - 1:
-                    print(f"⏳ Retrying ({attempt + 1}/{max_retries})...")
+                    logger.info(f"Retrying ({attempt + 1}/{max_retries})...")
                     time.sleep(retry_delay)
                     continue
                 return {}
             except Exception as e:
                 error_str = str(e)
-                print(f"❌ Indexing Failed (attempt {attempt + 1}/{max_retries}): {e}")
+                logger.error(f"Indexing Failed (attempt {attempt + 1}/{max_retries}): {e}")
                 
                 if "503" in error_str or "UNAVAILABLE" in error_str or "overloaded" in error_str:
                     if attempt < max_retries - 1:
                         wait_time = retry_delay * (attempt + 1)
-                        print(f"⏳ Server overloaded. Retrying in {wait_time} seconds...")
+                        logger.info(f"Server overloaded. Retrying in {wait_time} seconds...")
                         time.sleep(wait_time)
                         continue
                 
@@ -164,21 +180,21 @@ class RegulatoryIndexer:
                         match = re.search(r'retry in ([\d.]+)s', error_str)
                         if match and attempt < max_retries - 1:
                             wait_time = float(match.group(1)) + 1
-                            print(f"⏳ Quota exceeded. Retrying in {wait_time} seconds...")
+                            logger.info(f"Quota exceeded. Retrying in {wait_time} seconds...")
                             time.sleep(wait_time)
                             continue
                 
                 if attempt < max_retries - 1:
-                    print(f"⏳ Retrying ({attempt + 1}/{max_retries})...")
+                    logger.info(f"Retrying ({attempt + 1}/{max_retries})...")
                     time.sleep(retry_delay)
                     continue
         
-        print(f"❌ All retry attempts failed for: {doc_title}")
+        logger.error(f"All retry attempts failed for: {doc_title}")
         return {}
 
     def save_index(self, data: Dict, filename: str) -> None:
         if not data:
-            print("⚠️ Warning: No data to save")
+            logger.warning("Warning: No data to save")
             return
         
         os.makedirs(Config.INDEX_DIR, exist_ok=True)

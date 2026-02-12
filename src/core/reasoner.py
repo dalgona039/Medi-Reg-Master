@@ -337,7 +337,8 @@ class TreeRAGReasoner:
                     "document": doc_name,
                     "title": node["node"].get("title", "Untitled"),
                     "page_ref": node["node"].get("page_ref", "N/A"),
-                    "score": node.get("score", 0.0)
+                    "score": node.get("score", 0.0),
+                    "content": node["node"].get("summary", "")
                 } for node in relevant_nodes])
             else:
                 # DFS: visited_titles 목록
@@ -345,7 +346,8 @@ class TreeRAGReasoner:
                 all_selected.extend([{
                     "document": doc_name,
                     "title": node["node"].get("title", "Untitled"),
-                    "page_ref": node["node"].get("page_ref", "N/A")
+                    "page_ref": node["node"].get("page_ref", "N/A"),
+                    "content": node["node"].get("summary", "")
                 } for node in relevant_nodes])
         
         traversal_data = {

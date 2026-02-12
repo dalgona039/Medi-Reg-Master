@@ -79,7 +79,11 @@ export const UI_TEXT = {
     deepTraversalUsage: "Deep Traversal 사용률",
     recentQueries: "최근 질의",
     tokens: "토큰",
-    seconds: "초"
+    seconds: "초",
+    existingDocuments: "기존 문서",
+    loadDocument: "문서 열기",
+    documentLoaded: "문서가 로드되었습니다",
+    loadFailed: "문서 로드에 실패했습니다"
   },
   en: {
     settings: "Settings",
@@ -161,7 +165,11 @@ export const UI_TEXT = {
     deepTraversalUsage: "Deep Traversal Usage",
     recentQueries: "Recent Queries",
     tokens: "tokens",
-    seconds: "sec"
+    seconds: "sec",
+    existingDocuments: "Existing Documents",
+    loadDocument: "Open Document",
+    documentLoaded: "Document loaded",
+    loadFailed: "Failed to load document"
   },
   ja: {
     settings: "設定",
@@ -243,7 +251,11 @@ export const UI_TEXT = {
     deepTraversalUsage: "Deep Traversal 使用率",
     recentQueries: "最近の質問",
     tokens: "トークン",
-    seconds: "秒"
+    seconds: "秒",
+    existingDocuments: "既存の文書",
+    loadDocument: "文書を開く",
+    documentLoaded: "文書がロードされました",
+    loadFailed: "文書のロードに失敗しました"
   }
 };
 

@@ -5,8 +5,11 @@ Detects potential hallucinations in LLM responses by comparing
 generated content against source documents.
 """
 import re
+import logging
 from typing import List, Dict, Any, Tuple
 from difflib import SequenceMatcher
+
+logger = logging.getLogger(__name__)
 
 
 class HallucinationDetector:
@@ -32,6 +35,13 @@ class HallucinationDetector:
         """
         source_text = " ".join([node.get("content", "") for node in source_nodes])
         
+        logger.debug("Hallucination Detection:")
+        logger.debug(f"  - Source nodes count: {len(source_nodes)}")
+        logger.debug(f"  - Source text length: {len(source_text)} chars")
+        logger.debug(f"  - Answer length: {len(answer)} chars")
+        if len(source_text) > 0:
+            logger.debug(f"  - Source text sample: {source_text[:200]}...")
+        
         sentences = self._split_sentences(answer)
         
         sentence_scores = []
@@ -52,6 +62,11 @@ class HallucinationDetector:
             overall_confidence = 0.0
         
         hallucinated = [s for s in sentence_scores if not s["is_grounded"]]
+        
+        logger.debug(f"  - Total sentences analyzed: {len(sentence_scores)}")
+        logger.debug(f"  - Overall confidence: {overall_confidence:.3f}")
+        logger.debug(f"  - Hallucinated sentences: {len(hallucinated)}")
+        logger.debug(f"  - Is reliable: {overall_confidence >= self.confidence_threshold}")
         
         return {
             "overall_confidence": round(overall_confidence, 3),

@@ -96,10 +96,39 @@ export function useUpload(
     }
   };
 
+  const loadExistingIndex = async (indexFilename: string, t: any) => {
+    try {
+      const docName = indexFilename.replace('_index.json', '');
+      const originalFilename = docName.split('_').slice(1).join('_') + '.pdf';
+
+      const newSession: ChatSession = {
+        id: Date.now().toString(),
+        title: docName.split('_').slice(1).join(' '),
+        indexFiles: [indexFilename],
+        originalFilenames: [originalFilename],
+        messages: [
+          {
+            role: "assistant",
+            content: `${docName.split('_').slice(1).join(' ')} 문서가 로드되었습니다. 무엇이든 물어보세요.`
+          }
+        ],
+        createdAt: new Date(),
+      };
+
+      setSessions(prev => [newSession, ...prev]);
+      setCurrentSessionId(newSession.id);
+      toast.success(t.documentLoaded || "문서가 로드되었습니다");
+    } catch (error) {
+      console.error("Failed to load existing index:", error);
+      toast.error(t.loadFailed || "문서 로드에 실패했습니다");
+    }
+  };
+
   return {
     isUploading,
     uploadProgress,
     fileInputRef,
     handleFileUploadAndIndex,
+    loadExistingIndex,
   };
 }

@@ -1,5 +1,6 @@
 import os
 import time
+import logging
 from datetime import datetime, UTC
 from typing import List, Dict, Any, Optional
 import uvicorn
@@ -12,6 +13,14 @@ from src.api.routes import router
 from src.api.task_routes import router as task_router
 from src.config import Config
 from src.middleware.security import SecurityHeadersMiddleware
+
+# Logging configuration
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger(__name__)
 
 limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
 
@@ -47,7 +56,7 @@ async def check_api_connectivity() -> bool:
         health_cache.set("api_connectivity", result)
         return result
     except Exception as e:
-        print(f"❌ API health check failed: {e}")
+        logger.error(f"API health check failed: {e}")
         health_cache.set("api_connectivity", False)
         return False
 

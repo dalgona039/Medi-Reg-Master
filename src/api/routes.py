@@ -387,7 +387,7 @@ async def chat(request: Request, req: ChatRequest) -> ChatResponse:
             total_count = len(detection_result["sentence_analysis"])
             low_conf_ratio = low_conf_count / total_count if total_count > 0 else 0
             
-            if low_conf_ratio >= 0.7:
+            if low_conf_ratio >= 0.4:
                 hallucination_warning = {
                     "message": f"{low_conf_count}/{total_count} sentences have low confidence",
                     "overall_confidence": detection_result["overall_confidence"],

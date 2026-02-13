@@ -290,7 +290,8 @@ class ChatService:
         total_count = len(result["sentence_analysis"])
         low_conf_ratio = low_conf_count / total_count if total_count > 0 else 0
         
-        if low_conf_ratio >= 0.7:
+        # Show warning if 40% or more sentences have low confidence
+        if low_conf_ratio >= 0.4:
             print(f"Hallucination detected: {low_conf_count}/{total_count} sentences low confidence")
             return HallucinationWarning(
                 message=f"{low_conf_count}/{total_count} sentences have low confidence",

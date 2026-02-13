@@ -67,7 +67,7 @@ class ChatService:
         self,
         index_repository: Optional[IndexRepository] = None,
         document_router: Optional[DocumentRouterService] = None,
-        hallucination_threshold: float = 0.3,
+        hallucination_threshold: float = 0.5,
         enable_compression: bool = True
     ):
         self.index_repo = index_repository or IndexRepository()

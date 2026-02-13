@@ -379,7 +379,7 @@ async def chat(request: Request, req: ChatRequest) -> ChatResponse:
             ]
         
         hallucination_warning = None
-        detector = HallucinationDetector(confidence_threshold=0.3)
+        detector = HallucinationDetector(confidence_threshold=0.5)
         detection_result = detector.detect(answer, traversal_info["nodes_selected"])
         
         if not detection_result["is_reliable"] and len(detection_result["sentence_analysis"]) > 0:

@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class HallucinationDetector:
     """Detects potential hallucinations in LLM-generated responses."""
     
-    def __init__(self, confidence_threshold: float = 0.6):
+    def __init__(self, confidence_threshold: float = 0.5):
         """
         Args:
             confidence_threshold: Minimum confidence score (0-1) to consider valid
@@ -96,67 +96,97 @@ class HallucinationDetector:
         sentence_lower = sentence.lower()
         source_lower = source_text.lower()
         
+        # Short sentences get moderate confidence
         if len(sentence_lower) < 10:
-            return 0.7
+            return 0.75
         
+        # Exact match
         if sentence_lower in source_lower:
             return 1.0
         
-        signals = []
+        # Use max score approach with weighted signals
+        scores = []
         
+        # 1. Citation presence (strong signal)
         citation_patterns = [r'\[.+?,\s*p\.\d+\]', r'section\s+\d+', r'chapter\s+\d+', r'table\s+\d+']
         has_citation = any(re.search(pattern, sentence_lower) for pattern in citation_patterns)
         if has_citation:
-            signals.append(0.8)
+            scores.append(0.85)
         
+        # 2. Word overlap with weights
         sentence_words = re.findall(r'\w+', sentence_lower)
         source_words = re.findall(r'\w+', source_lower)
         
         stop_words = {'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 
                      'of', 'with', 'is', 'are', 'was', 'were', 'been', 'be', 'have', 'has', 'had',
-                     'this', 'that', 'these', 'those', 'it', 'its', 'which', 'what', 'who'}
+                     'this', 'that', 'these', 'those', 'it', 'its', 'which', 'what', 'who',
+                     '은', '는', '이', '가', '을', '를', '의', '에', '도', '와', '과', '으로', '로'}
         
-        sentence_words_filtered = [w for w in sentence_words if w not in stop_words]
+        sentence_words_filtered = [w for w in sentence_words if w not in stop_words and len(w) > 1]
         source_words_set = set(source_words)
         
         if sentence_words_filtered:
-            word_weights = []
+            matched_words = 0
+            total_weight = 0
+            
             for word in sentence_words_filtered:
                 weight = 1.0
+                # Numbers and long words are important
                 if re.match(r'\d+', word):
+                    weight = 2.5
+                elif len(word) > 8:
                     weight = 2.0
-                if len(word) > 8:
+                elif len(word) > 5:
                     weight = 1.5
+                
+                total_weight += weight
                 if word in source_words_set:
-                    word_weights.append(weight)
+                    matched_words += weight
             
-            if len(sentence_words_filtered) > 0:
-                weighted_overlap = sum(word_weights) / len(sentence_words_filtered)
-                signals.append(weighted_overlap)
-                signals.append(weighted_overlap)
+            if total_weight > 0:
+                word_overlap = matched_words / total_weight
+                # Word overlap is a strong signal, weight it heavily
+                scores.append(word_overlap)
+                scores.append(word_overlap)  # Double weight
         
+        # 3. Bigram overlap (moderate signal)
         bigrams_sent = [' '.join(sentence_words[i:i+2]) for i in range(len(sentence_words)-1)]
         bigrams_src = [' '.join(source_words[i:i+2]) for i in range(len(source_words)-1)]
         if bigrams_sent:
             bigram_overlap = len([b for b in bigrams_sent if b in bigrams_src]) / len(bigrams_sent)
-            signals.append(bigram_overlap)
+            if bigram_overlap > 0:
+                scores.append(bigram_overlap * 1.2)  # Boost bigram signals
         
+        # 4. Trigram overlap (strong signal when present)
         trigrams_sent = [' '.join(sentence_words[i:i+3]) for i in range(len(sentence_words)-2)]
         trigrams_src = [' '.join(source_words[i:i+3]) for i in range(len(source_words)-2)]
         if trigrams_sent:
             trigram_overlap = len([t for t in trigrams_sent if t in trigrams_src]) / len(trigrams_sent)
-            signals.append(trigram_overlap)
+            if trigram_overlap > 0:
+                scores.append(trigram_overlap * 1.5)  # Strong boost for trigram matches
         
-        chunks = [sentence_lower[i:i+20] for i in range(0, len(sentence_lower), 10)]
-        chunk_matches = sum(1 for chunk in chunks if chunk in source_lower)
+        # 5. Character chunk overlap
+        chunk_size = 15
+        chunks = [sentence_lower[i:i+chunk_size] for i in range(0, len(sentence_lower), chunk_size//2)]
+        chunk_matches = sum(1 for chunk in chunks if len(chunk) > 5 and chunk in source_lower)
         if chunks:
             chunk_score = chunk_matches / len(chunks)
-            signals.append(chunk_score)
+            if chunk_score > 0:
+                scores.append(chunk_score)
         
-        if signals:
-            confidence = sum(signals) / len(signals)
+        # Calculate final confidence: use weighted average with baseline
+        if scores:
+            # Take the max of average and best signal (with weight)
+            avg_score = sum(scores) / len(scores)
+            max_score = max(scores)
+            # Blend: 60% max, 40% average for more balanced scoring
+            confidence = 0.6 * max_score + 0.4 * avg_score
         else:
-            confidence = 0.0
+            # No matches found, but set baseline to 0.3 instead of 0
+            confidence = 0.3
+        
+        # Ensure minimum confidence of 0.35 for any response
+        confidence = max(confidence, 0.35)
         
         return min(confidence, 1.0)
     
@@ -219,7 +249,7 @@ class HallucinationDetector:
         return summary.strip()
 
 
-def create_detector(confidence_threshold: float = 0.6) -> HallucinationDetector:
+def create_detector(confidence_threshold: float = 0.5) -> HallucinationDetector:
     """
     Factory function to create a hallucination detector.
     

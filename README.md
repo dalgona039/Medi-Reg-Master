@@ -1,6 +1,6 @@
 # 🌳 TreeRAG - Hierarchical Document Intelligence Platform
 
-[![Python 3.14.2](https://img.shields.io/badge/python-3.14.2-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.14](https://img.shields.io/badge/python-3.14-blue.svg)](https://www.python.org/downloads/)
 [![Next.js 16](https://img.shields.io/badge/Next.js-16-black.svg)](https://nextjs.org/)
 [![Tests](https://img.shields.io/badge/tests-469%20passed-brightgreen.svg)](https://github.com/dalgona039/TreeRAG)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -9,7 +9,7 @@
 
 <div align="center">
   <img src="https://img.shields.io/badge/RAG-Tree--Based-green" alt="Tree-Based RAG" />
-  <img src="https://img.shields.io/badge/Gemini-2.0--flash--exp-purple" alt="Gemini 2.0-flash-exp" />
+  <img src="https://img.shields.io/badge/Gemini-3--flash--preview-purple" alt="Gemini 3 Flash Preview" />
   <img src="https://img.shields.io/badge/FastAPI-Backend-teal" alt="FastAPI" />
   <img src="https://img.shields.io/badge/React-19-blue" alt="React 19" />
 </div>
@@ -154,7 +154,7 @@ graph TD
 ## 🚀 Quick Start
 
 ### Prerequisites
-- **Python 3.14.2** (medireg conda environment)
+- **Python 3.14** (medireg conda environment)
 - **Node.js 20+** (for Next.js frontend)
 - **Gemini API Key** ([Get one here](https://ai.google.dev/))
 
@@ -168,7 +168,7 @@ git clone https://github.com/dalgona039/TreeRAG.git
 cd TreeRAG
 
 # 2. Configure API key
-echo "GEMINI_API_KEY=your_api_key_here" > .env
+echo "GOOGLE_API_KEY=your_api_key_here" > .env
 
 # 3. Start with Docker Compose
 docker-compose up -d
@@ -194,7 +194,7 @@ pip install reportlab
 
 # 3. Configure API key
 cp .env.example .env
-# Edit .env and add your GEMINI_API_KEY
+# Edit .env and add your GOOGLE_API_KEY
 
 # 4. Start backend
 python main.py
@@ -314,8 +314,8 @@ curl -X POST http://localhost:8000/api/cache/clear
 
 #### Backend
 - **FastAPI** - High-performance async API
-- **google.genai** - Gemini 2.0-flash-exp for LLM reasoning (configurable)
-- **Python 3.14.2 (medireg)** - Current runtime with full compatibility
+- **google.genai** - Gemini 3 Flash Preview for LLM reasoning (configurable)
+- **Python 3.14 (medireg)** - Current runtime with full compatibility
 - **Pydantic V2** - Modern type-safe validation with ConfigDict and field_validator
 - **Type-safe API** - Zero deprecation warnings, production-ready
 - **Smart file handling** - UUID-based filenames for uniqueness, original name preservation
@@ -607,7 +607,7 @@ TreeRAG/
 **TreeRAGReasoner** ([src/core/reasoner.py](src/core/reasoner.py))
 - Main inference engine for the system
 - Loads PageIndex files and processes user queries
-- LLM integration with Gemini 2.0-flash-exp (configurable)
+- LLM integration with Gemini 3 Flash Preview (configurable)
 - Generates structured answers with page-level citations
 - Handles multi-document comparison and routing
 - Supports both flat retrieval and deep traversal modes
@@ -782,7 +782,7 @@ REAL_API_TEST=1 pytest tests/test_integration_real_api.py -v -m integration_real
 **Test Coverage:**
 - ✅ 469 tests passing, 15 skipped (96.9% success rate)
 - ✅ Zero deprecation warnings (Pydantic V2, datetime.now(UTC), HTTP 413 updates)
-- ✅ Python 3.14.2 fully compatible
+- ✅ Python 3.14 fully compatible
 - ✅ Real API integration tests (optional, guarded by REAL_API_TEST=1)
 - ✅ PHASE 3 research modules: 142 tests for benchmarking, scoring, error/theory analysis
 
@@ -936,7 +936,7 @@ REAL_API_TEST=1 pytest tests/test_integration_real_api.py -v -m integration_real
 - **Total Tests:** 469 passing, 15 skipped (484 collected)
 - **Pass Rate:** 96.9% (469/484)
 - **Execution Time:** 44 seconds (full suite)
-- **Python Version:** 3.14.2 (medireg environment)
+- **Python Version:** 3.14 (medireg environment)
 - **Code Quality:** Zero warnings (Pydantic V2, deprecation fixes complete)
 - **PHASE 3 Tests:** 142 new tests for research framework
 - **Coverage:** Core functionality, API routes, error handling, domain detection, research analysis
@@ -995,7 +995,7 @@ MIT License - see [LICENSE](LICENSE) file for details
 
 ## 🙏 Acknowledgments
 
-- **Gemini 2.5-flash** by Google for state-of-the-art LLM reasoning
+- **Gemini 3 Flash Preview** by Google for state-of-the-art LLM reasoning
 - **FastAPI** for elegant Python API framework
 - **Next.js** for modern React development
 - **Inspired by** document analysis workflows across multiple domains

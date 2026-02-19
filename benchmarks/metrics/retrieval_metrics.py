@@ -33,7 +33,7 @@ class RetrievalResult:
     doc_id: str
     rank: int
     score: float
-    relevance: float  # 0.0 to 1.0 (binary or graded)
+    relevance: float                                 
     
     def is_relevant(self, threshold: float = 0.5) -> bool:
         """Check if result is relevant above threshold."""
@@ -46,7 +46,7 @@ class QueryResult:
     query_id: str
     query_text: str
     retrieved: List[RetrievalResult]
-    relevant_doc_ids: Set[str]  # Ground truth
+    relevant_doc_ids: Set[str]                
     latency_ms: float = 0.0
     tokens_used: int = 0
 
@@ -75,7 +75,7 @@ class BenchmarkMetrics:
     hit_rate_at_k: Dict[int, float] = field(default_factory=dict)
     f1_at_k: Dict[int, float] = field(default_factory=dict)
     
-    # Per-query details for statistical tests
+                                             
     per_query_metrics: Dict[str, Dict[str, float]] = field(default_factory=dict)
     
     def to_dict(self) -> Dict[str, Any]:
@@ -224,11 +224,11 @@ class RetrievalMetrics:
             rank = i + 1
             
             if use_graded:
-                # Graded relevance: (2^rel - 1) / log2(rank+1)
+                                                              
                 rel = result.relevance
                 gain = (2 ** rel - 1) / math.log2(rank + 1)
             else:
-                # Binary relevance: rel / log2(rank+1)
+                                                      
                 rel = 1.0 if result.relevance >= self.relevance_threshold else 0.0
                 gain = rel / math.log2(rank + 1)
             
@@ -262,19 +262,19 @@ class RetrievalMetrics:
         if not relevant_ids:
             return 0.0
         
-        # Compute actual DCG
+                            
         dcg = self.dcg_at_k(retrieved, k, use_graded=relevance_scores is not None)
         
-        # Compute ideal DCG
+                           
         if relevance_scores:
-            # Sort by relevance scores for ideal ranking
+                                                        
             ideal_rels = sorted(relevance_scores.values(), reverse=True)[:k]
             idcg = sum(
                 (2 ** rel - 1) / math.log2(i + 2)
                 for i, rel in enumerate(ideal_rels)
             )
         else:
-            # Binary relevance: ideal is all relevant docs at top
+                                                                 
             n_relevant = len(relevant_ids)
             ideal_k = min(k, n_relevant)
             idcg = sum(
@@ -384,7 +384,7 @@ class RetrievalMetrics:
         if n_queries == 0:
             return metrics
         
-        # Initialize accumulators
+                                 
         precision_sums = {k: 0.0 for k in k_values}
         recall_sums = {k: 0.0 for k in k_values}
         ndcg_sums = {k: 0.0 for k in k_values}
@@ -393,11 +393,11 @@ class RetrievalMetrics:
         mrr_sum = 0.0
         ap_sum = 0.0
         
-        # Process each query
+                            
         for qr in query_results:
             query_metrics: Dict[str, float] = {}
             
-            # Compute per-query metrics
+                                       
             for k in k_values:
                 p_k = self.precision_at_k(qr.retrieved, qr.relevant_doc_ids, k)
                 r_k = self.recall_at_k(qr.retrieved, qr.relevant_doc_ids, k)
@@ -428,7 +428,7 @@ class RetrievalMetrics:
             
             metrics.per_query_metrics[qr.query_id] = query_metrics
         
-        # Compute averages
+                          
         for k in k_values:
             metrics.precision_at_k[k] = precision_sums[k] / n_queries
             metrics.recall_at_k[k] = recall_sums[k] / n_queries
@@ -484,7 +484,7 @@ def create_query_result(
     Returns:
         QueryResult object
     """
-    # Create retrieval results
+                              
     rel_scores_map = {}
     if relevance_scores:
         for doc_id, score in zip(relevant_ids, relevance_scores):

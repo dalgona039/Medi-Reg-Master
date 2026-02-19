@@ -1,9 +1,3 @@
-"""
-Compare Baselines: FlatRAG vs TreeRAG
-
-This module runs comprehensive comparisons between TreeRAG
-and baseline retrieval systems with statistical testing.
-"""
 
 import json
 import time
@@ -41,17 +35,17 @@ class BaselineType(str, Enum):
 @dataclass
 class BenchmarkConfig:
     """Configuration for benchmark runs."""
-    # Metrics to compute
+                        
     k_values: List[int] = field(default_factory=lambda: [1, 3, 5, 10])
     compute_retrieval: bool = True
     compute_efficiency: bool = True
     compute_fidelity: bool = True
     
-    # Statistical testing
+                         
     alpha: float = 0.05
     n_bootstrap: int = 10000
     
-    # Output format
+                   
     output_latex: bool = True
     output_json: bool = True
     output_dir: str = "benchmarks/results"
@@ -66,7 +60,7 @@ class SystemResult:
     efficiency_metrics: Optional[EfficiencyResult] = None
     fidelity_metrics: Optional[FidelityResult] = None
     
-    # Raw per-query data for statistical testing
+                                                
     per_query_scores: Dict[str, Dict[str, float]] = field(default_factory=dict)
     
     def to_dict(self) -> Dict[str, Any]:
@@ -88,7 +82,7 @@ class ComparisonResult:
     baseline: SystemResult
     statistical_comparisons: Dict[str, ComparisonSummary] = field(default_factory=dict)
     
-    # Summary
+             
     primary_wins: int = 0
     baseline_wins: int = 0
     ties: int = 0
@@ -125,7 +119,7 @@ class BaselineRunner:
         """Initialize baseline runner."""
         self.config = config or BenchmarkConfig()
         
-        # Metrics calculators
+                             
         self.retrieval_metrics = RetrievalMetrics()
         self.efficiency_metrics = EfficiencyMetrics()
         self.fidelity_metrics = FidelityMetrics()
@@ -158,31 +152,31 @@ class BaselineRunner:
             system_type=BaselineType.FLAT_RAG
         )
         
-        # Chunk documents
+                         
         chunks = self._chunk_documents(documents, chunk_size)
         
         query_results = []
         for i, query in enumerate(queries):
             start_time = time.perf_counter()
             
-            # Simple similarity-based retrieval (placeholder)
-            # In real implementation, use embedding similarity
+                                                             
+                                                              
             retrieved = self._retrieve_chunks(query, chunks, top_k)
             
             end_time = time.perf_counter()
             latency_ms = (end_time - start_time) * 1000
             
-            # Create query result (ground truth would come from labeled data)
+                                                                             
             qr = QueryResult(
                 query_id=f"q_{i}",
                 query_text=query,
                 retrieved=retrieved,
-                relevant_doc_ids=set(),  # Would be from labeled data
+                relevant_doc_ids=set(),                              
                 latency_ms=latency_ms
             )
             query_results.append(qr)
             
-            # Store per-query latency
+                                     
             result.per_query_scores[f"q_{i}"] = {"latency": latency_ms}
         
         return result
@@ -208,7 +202,7 @@ class BaselineRunner:
         top_k: int
     ) -> List[RetrievalResult]:
         """Retrieve top-k chunks (placeholder using simple matching)."""
-        # Simple word overlap scoring (placeholder for embedding similarity)
+                                                                            
         query_words = set(query.lower().split())
         
         scored_chunks = []
@@ -218,7 +212,7 @@ class BaselineRunner:
             score = overlap / len(query_words) if query_words else 0
             scored_chunks.append((chunk_id, score, chunk_text))
         
-        # Sort by score descending
+                                  
         scored_chunks.sort(key=lambda x: x[1], reverse=True)
         
         results = []
@@ -227,7 +221,7 @@ class BaselineRunner:
                 doc_id=chunk_id,
                 rank=rank,
                 score=score,
-                relevance=0.0  # Would be from labeled data
+                relevance=0.0                              
             ))
         
         return results
@@ -269,19 +263,19 @@ class BaselineComparison:
             baseline=baseline_result
         )
         
-        # Compare retrieval metrics
+                                   
         if treerag_result.retrieval_metrics and baseline_result.retrieval_metrics:
             self._compare_retrieval(comparison)
         
-        # Compare efficiency metrics
+                                    
         if treerag_result.efficiency_metrics and baseline_result.efficiency_metrics:
             self._compare_efficiency(comparison)
         
-        # Compare fidelity metrics
+                                  
         if treerag_result.fidelity_metrics and baseline_result.fidelity_metrics:
             self._compare_fidelity(comparison)
         
-        # Count wins
+                    
         for name, comp in comparison.statistical_comparisons.items():
             if comp.winner == treerag_result.system_name:
                 comparison.primary_wins += 1
@@ -297,9 +291,9 @@ class BaselineComparison:
         treerag = comparison.primary.retrieval_metrics
         baseline = comparison.baseline.retrieval_metrics
         
-        # Compare at each K value
+                                 
         for k in self.config.k_values:
-            # P@K
+                 
             if k in treerag.precision_at_k and k in baseline.precision_at_k:
                 treerag_scores = list(
                     m.get(f"P@{k}", 0.0) 
@@ -320,7 +314,7 @@ class BaselineComparison:
                     )
                     comparison.statistical_comparisons[f"P@{k}"] = comp
             
-            # NDCG@K
+                    
             if k in treerag.ndcg_at_k and k in baseline.ndcg_at_k:
                 treerag_scores = list(
                     m.get(f"NDCG@{k}", 0.0) 
@@ -341,7 +335,7 @@ class BaselineComparison:
                     )
                     comparison.statistical_comparisons[f"NDCG@{k}"] = comp
         
-        # MRR
+             
         treerag_mrr = list(
             m.get("MRR", 0.0) for m in treerag.per_query_metrics.values()
         )
@@ -364,13 +358,13 @@ class BaselineComparison:
         treerag = comparison.primary.efficiency_metrics
         baseline = comparison.baseline.efficiency_metrics
         
-        # Latency comparison
+                            
         treerag_latencies = list(treerag.per_query_latencies.values())
         baseline_latencies = list(baseline.per_query_latencies.values())
         
         if treerag_latencies and baseline_latencies:
             comp = self.stats.compare_methods(
-                comparison.baseline.system_name,  # Lower is better, so swap
+                comparison.baseline.system_name,                            
                 comparison.primary.system_name,
                 baseline_latencies,
                 treerag_latencies,
@@ -378,13 +372,13 @@ class BaselineComparison:
             )
             comparison.statistical_comparisons["Latency"] = comp
         
-        # Token usage comparison
+                                
         treerag_tokens = list(treerag.per_query_tokens.values())
         baseline_tokens = list(baseline.per_query_tokens.values())
         
         if treerag_tokens and baseline_tokens:
             comp = self.stats.compare_methods(
-                comparison.baseline.system_name,  # Lower is better
+                comparison.baseline.system_name,                   
                 comparison.primary.system_name,
                 baseline_tokens,
                 treerag_tokens,
@@ -397,7 +391,7 @@ class BaselineComparison:
         treerag = comparison.primary.fidelity_metrics
         baseline = comparison.baseline.fidelity_metrics
         
-        # Groundedness comparison
+                                 
         treerag_groundedness = list(treerag.per_query_groundedness.values())
         baseline_groundedness = list(baseline.per_query_groundedness.values())
         
@@ -483,7 +477,7 @@ def run_full_comparison(
     """
     config = config or BenchmarkConfig()
     
-    # Compute metrics
+                     
     retrieval_calc = RetrievalMetrics()
     
     treerag_metrics = retrieval_calc.compute_all_metrics(
@@ -493,7 +487,7 @@ def run_full_comparison(
         flatrag_query_results, config.k_values
     )
     
-    # Create system results
+                           
     treerag_result = SystemResult(
         system_name="TreeRAG",
         system_type=BaselineType.TREE_RAG,
@@ -506,7 +500,7 @@ def run_full_comparison(
         retrieval_metrics=flatrag_metrics
     )
     
-    # Compare
+             
     comparator = BaselineComparison(config)
     return comparator.compare(treerag_result, flatrag_result)
 
@@ -525,12 +519,12 @@ def save_results(
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
     
-    # Save JSON
+               
     json_path = output_path / "comparison_results.json"
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(comparison.to_dict(), f, indent=2, ensure_ascii=False)
     
-    # Save LaTeX
+                
     comparator = BaselineComparison()
     latex = comparator.generate_latex(comparison)
     
@@ -538,7 +532,7 @@ def save_results(
     with open(latex_path, "w", encoding="utf-8") as f:
         f.write(latex)
     
-    # Save report
+                 
     report = comparator.generate_report(comparison)
     
     report_path = output_path / "comparison_report.json"

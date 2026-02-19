@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import List, Dict, Optional, Any
 from dataclasses import dataclass, asdict
 
-# Add parent to path for imports
+                                
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from benchmarks.metrics.retrieval_metrics import (
@@ -51,31 +51,31 @@ class BenchmarkQuestion:
     question_id: str
     question: str
     document_id: str
-    relevant_sections: List[str]  # IDs of relevant sections
+    relevant_sections: List[str]                            
     expected_answer: str
     domain: str = "general"
-    difficulty: str = "medium"  # easy, medium, hard
+    difficulty: str = "medium"                      
 
 
 @dataclass
 class EvaluationConfig:
     """Configuration for evaluation run."""
-    # Data paths
+                
     questions_path: str = "benchmarks/datasets/benchmark_questions.json"
     documents_dir: str = "data/raw"
     indices_dir: str = "data/indices"
     
-    # Systems to evaluate
-    systems: List[str] = None  # ["treerag", "flatrag", "bm25"]
+                         
+    systems: List[str] = None                                  
     
-    # Metrics configuration
-    k_values: List[int] = None  # [1, 3, 5, 10]
+                           
+    k_values: List[int] = None                 
     
-    # Output
+            
     output_dir: str = "benchmarks/results"
     experiment_name: str = "default"
     
-    # Options
+             
     use_cache: bool = True
     verbose: bool = True
     
@@ -150,10 +150,10 @@ class EvaluationRunner:
         self.fidelity_metrics = FidelityMetrics()
         self.stats = StatisticalTests()
         
-        # Load dataset
+                      
         self.dataset = BenchmarkDataset(config.questions_path)
         
-        # Results storage
+                         
         self.results: Dict[str, SystemResult] = {}
     
     def run(self) -> Dict[str, Any]:
@@ -168,7 +168,7 @@ class EvaluationRunner:
         print(f"Questions: {len(self.dataset.questions)}")
         print("-" * 50)
         
-        # Evaluate each system
+                              
         for system in self.config.systems:
             print(f"\nEvaluating {system}...")
             
@@ -185,13 +185,13 @@ class EvaluationRunner:
             self.results[system] = result
             print(f"  Completed: {system}")
         
-        # Compare systems
+                         
         comparisons = self._compare_all_systems()
         
-        # Generate report
+                         
         report = self._generate_report(comparisons)
         
-        # Save results
+                      
         self._save_results(report, comparisons)
         
         return report
@@ -209,11 +209,11 @@ class EvaluationRunner:
         fidelity_analyses = []
         
         for question in self.dataset.questions:
-            # Run TreeRAG query
+                               
             start_time = time.perf_counter()
             
-            # TODO: Integrate with actual TreeRAG reasoner
-            # For now, simulate results
+                                                          
+                                       
             retrieved = self._simulate_treerag_retrieval(question)
             context = self._get_context(retrieved)
             answer = self._simulate_answer(question, context)
@@ -221,7 +221,7 @@ class EvaluationRunner:
             end_time = time.perf_counter()
             latency_ms = (end_time - start_time) * 1000
             
-            # Create query result
+                                 
             qr = QueryResult(
                 query_id=question.question_id,
                 query_text=question.question,
@@ -231,25 +231,25 @@ class EvaluationRunner:
             )
             query_results.append(qr)
             
-            # Record latency
+                            
             latency_measurements.append(LatencyMeasurement(
                 query_id=question.question_id,
                 total_ms=latency_ms,
-                traversal_ms=latency_ms * 0.3,  # Estimate
+                traversal_ms=latency_ms * 0.3,            
                 llm_ms=latency_ms * 0.7
             ))
             
-            # Record tokens
+                           
             token_usages.append(TokenUsage(
                 query_id=question.question_id,
                 input_tokens=len(context) // 4,
                 output_tokens=len(answer) // 4,
                 total_tokens=(len(context) + len(answer)) // 4,
                 context_tokens=len(context) // 4,
-                original_document_tokens=10000  # Placeholder
+                original_document_tokens=10000               
             ))
             
-            # Analyze fidelity
+                              
             fidelity_analyses.append(
                 self.fidelity_metrics.analyze_answer(
                     question.question_id,
@@ -258,12 +258,12 @@ class EvaluationRunner:
                 )
             )
             
-            # Store per-query scores
+                                    
             result.per_query_scores[question.question_id] = {
                 "latency": latency_ms
             }
         
-        # Compute metrics
+                         
         result.retrieval_metrics = self.retrieval_metrics.compute_all_metrics(
             query_results, self.config.k_values
         )
@@ -295,8 +295,8 @@ class EvaluationRunner:
         for question in self.dataset.questions:
             start_time = time.perf_counter()
             
-            # TODO: Integrate with actual FlatRAG
-            # For now, simulate results
+                                                 
+                                       
             retrieved = self._simulate_flatrag_retrieval(question)
             context = self._get_context(retrieved)
             answer = self._simulate_answer(question, context)
@@ -319,10 +319,10 @@ class EvaluationRunner:
                 llm_ms=latency_ms * 0.9
             ))
             
-            # FlatRAG typically uses more tokens
+                                                
             token_usages.append(TokenUsage(
                 query_id=question.question_id,
-                input_tokens=len(context) // 3,  # More tokens
+                input_tokens=len(context) // 3,               
                 output_tokens=len(answer) // 4,
                 total_tokens=(len(context) // 3 + len(answer) // 4),
                 context_tokens=len(context) // 3,
@@ -359,13 +359,13 @@ class EvaluationRunner:
     
     def _evaluate_bm25(self) -> SystemResult:
         """Evaluate BM25 baseline."""
-        # Similar structure to FlatRAG
+                                      
         result = SystemResult(
             system_name="BM25",
             system_type=BaselineType.BM25
         )
         
-        # TODO: Implement BM25 evaluation
+                                         
         
         return result
     
@@ -374,7 +374,7 @@ class EvaluationRunner:
         question: BenchmarkQuestion
     ) -> List[RetrievalResult]:
         """Simulate TreeRAG retrieval (placeholder)."""
-        # In practice, this would call the actual TreeRAG system
+                                                                
         results = []
         
         for i, section_id in enumerate(question.relevant_sections[:5]):
@@ -394,7 +394,7 @@ class EvaluationRunner:
         """Simulate FlatRAG retrieval (placeholder)."""
         results = []
         
-        # FlatRAG might retrieve some relevant sections
+                                                       
         for i, section_id in enumerate(question.relevant_sections[:3]):
             results.append(RetrievalResult(
                 doc_id=section_id,
@@ -403,7 +403,7 @@ class EvaluationRunner:
                 relevance=1.0
             ))
         
-        # Plus some irrelevant ones
+                                   
         for i in range(2):
             results.append(RetrievalResult(
                 doc_id=f"irrelevant_{i}",
@@ -416,7 +416,7 @@ class EvaluationRunner:
     
     def _get_context(self, retrieved: List[RetrievalResult]) -> str:
         """Get context from retrieved results."""
-        # Placeholder - would load actual text
+                                              
         return "Retrieved context text for the query."
     
     def _simulate_answer(
@@ -431,7 +431,7 @@ class EvaluationRunner:
         """Compare all evaluated systems."""
         comparisons = {}
         
-        # Compare TreeRAG vs each baseline
+                                          
         if "treerag" in self.results:
             treerag = self.results["treerag"]
             
@@ -459,11 +459,11 @@ class EvaluationRunner:
             "comparisons": {}
         }
         
-        # Add per-system results
+                                
         for system_name, result in self.results.items():
             report["results_by_system"][system_name] = result.to_dict()
         
-        # Add comparisons
+                         
         for comp_name, comp in comparisons.items():
             comparator = BaselineComparison()
             report["comparisons"][comp_name] = comparator.generate_report(comp)
@@ -479,18 +479,18 @@ class EvaluationRunner:
         output_dir = Path(self.config.output_dir) / self.config.experiment_name
         output_dir.mkdir(parents=True, exist_ok=True)
         
-        # Save main report
+                          
         report_path = output_dir / "evaluation_report.json"
         with open(report_path, 'w', encoding='utf-8') as f:
             json.dump(report, f, indent=2, ensure_ascii=False)
         
         print(f"\nResults saved to: {output_dir}")
         
-        # Save comparison results
+                                 
         for comp_name, comp in comparisons.items():
             save_results(comp, str(output_dir / comp_name))
         
-        # Generate summary
+                          
         self._print_summary(report)
     
     def _print_summary(self, report: Dict[str, Any]) -> None:
@@ -499,7 +499,7 @@ class EvaluationRunner:
         print("EVALUATION SUMMARY")
         print("=" * 50)
         
-        # Per-system metrics
+                            
         for system_name, result in report["results_by_system"].items():
             print(f"\n{system_name}:")
             
@@ -517,7 +517,7 @@ class EvaluationRunner:
                 tokens = efficiency.get("tokens", {})
                 print(f"  Token reduction: {tokens.get('reduction_mean', 0)*100:.1f}%")
         
-        # Comparisons
+                     
         for comp_name, comp in report["comparisons"].items():
             print(f"\n{comp_name}:")
             summary = comp.get("summary", {})

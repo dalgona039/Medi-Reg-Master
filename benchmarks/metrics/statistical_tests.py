@@ -34,16 +34,16 @@ class StatisticalTestResult:
     significant: bool
     alpha: float = 0.05
     
-    # Effect size
+                 
     effect_size: Optional[float] = None
     effect_size_interpretation: Optional[str] = None
     
-    # Confidence interval
+                         
     ci_lower: Optional[float] = None
     ci_upper: Optional[float] = None
     ci_level: float = 0.95
     
-    # Additional info
+                     
     n_samples: int = 0
     method_a_mean: float = 0.0
     method_b_mean: float = 0.0
@@ -87,18 +87,18 @@ class ComparisonSummary:
     metric: str
     n_samples: int
     
-    # Descriptive statistics
+                            
     method_a_mean: float
     method_a_std: float
     method_b_mean: float
     method_b_std: float
     
-    # Test results
+                  
     tests: Dict[str, StatisticalTestResult] = field(default_factory=dict)
     
-    # Overall conclusion
+                        
     winner: Optional[str] = None
-    confidence: str = "none"  # none, low, medium, high
+    confidence: str = "none"                           
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
@@ -188,23 +188,23 @@ class StatisticalTests:
                 n_samples=n
             )
         
-        # Compute differences
+                             
         differences = [a - b for a, b in zip(scores_a, scores_b)]
         
         mean_diff = self.mean(differences)
         std_diff = self.std(differences)
         
-        # t-statistic
+                     
         if std_diff == 0:
             t_stat = float('inf') if mean_diff != 0 else 0.0
         else:
             t_stat = mean_diff / (std_diff / math.sqrt(n))
         
-        # Approximate p-value using normal approximation for large n
-        # For small n, this is approximate
+                                                                    
+                                          
         p_value = self._ttest_pvalue(abs(t_stat), n - 1)
         
-        # Cohen's d effect size
+                               
         pooled_std = math.sqrt((self.std(scores_a) ** 2 + self.std(scores_b) ** 2) / 2)
         effect_size = mean_diff / pooled_std if pooled_std > 0 else 0.0
         
@@ -228,27 +228,27 @@ class StatisticalTests:
         
         For more accurate results, use scipy.stats.t.sf
         """
-        # Normal approximation for large df
+                                           
         if df > 30:
-            # Use normal CDF approximation
+                                          
             z = abs(t_stat)
-            # Approximation: 2 * (1 - Φ(|t|))
+                                             
             p = 2 * (1 - self._normal_cdf(z))
             return max(p, 1e-10)
         
-        # For small df, use rough approximation
-        # This is not as accurate as scipy.stats.t
+                                               
+                                                  
         t_critical_05 = {
             1: 12.71, 2: 4.30, 3: 3.18, 4: 2.78, 5: 2.57,
             10: 2.23, 15: 2.13, 20: 2.09, 25: 2.06, 30: 2.04
         }
         
-        # Find closest df
+                         
         closest_df = min(t_critical_05.keys(), key=lambda k: abs(k - df))
         t_crit = t_critical_05[closest_df]
         
         if abs(t_stat) > t_crit:
-            # Rough estimate: more extreme = smaller p
+                                                      
             ratio = t_crit / abs(t_stat)
             return 0.05 * ratio ** 2
         else:
@@ -256,7 +256,7 @@ class StatisticalTests:
     
     def _normal_cdf(self, x: float) -> float:
         """Approximate normal CDF using error function approximation."""
-        # Abramowitz and Stegun approximation
+                                             
         a1, a2, a3, a4, a5 = 0.254829592, -0.284496736, 1.421413741, -1.453152027, 1.061405429
         p = 0.3275911
         
@@ -290,10 +290,10 @@ class StatisticalTests:
         
         n = len(scores_a)
         
-        # Compute differences and ranks
+                                       
         differences = [(a - b, i) for i, (a, b) in enumerate(zip(scores_a, scores_b))]
         
-        # Remove zero differences
+                                 
         non_zero = [(d, i) for d, i in differences if d != 0]
         
         if not non_zero:
@@ -305,20 +305,20 @@ class StatisticalTests:
                 n_samples=n
             )
         
-        # Rank by absolute value
+                                
         ranked = sorted(non_zero, key=lambda x: abs(x[0]))
         ranks = {}
         for rank, (diff, idx) in enumerate(ranked, 1):
             ranks[idx] = rank
         
-        # Compute W+ (sum of positive ranks) and W- (sum of negative ranks)
+                                                                           
         w_plus = sum(ranks[i] for d, i in non_zero if d > 0)
         w_minus = sum(ranks[i] for d, i in non_zero if d < 0)
         
         w = min(w_plus, w_minus)
         n_eff = len(non_zero)
         
-        # Normal approximation for p-value
+                                          
         expected = n_eff * (n_eff + 1) / 4
         std_w = math.sqrt(n_eff * (n_eff + 1) * (2 * n_eff + 1) / 24)
         
@@ -329,7 +329,7 @@ class StatisticalTests:
         
         p_value = 2 * (1 - self._normal_cdf(abs(z)))
         
-        # Effect size: r = Z / sqrt(N)
+                                      
         effect_size = abs(z) / math.sqrt(n) if n > 0 else 0.0
         
         return StatisticalTestResult(
@@ -371,12 +371,12 @@ class StatisticalTests:
         n = len(scores_a)
         observed_diff = self.mean(scores_a) - self.mean(scores_b)
         
-        # Bootstrap resampling
+                              
         random.seed(self.random_seed)
         bootstrap_diffs = []
         
         for _ in range(n_bootstrap):
-            # Sample with replacement
+                                     
             indices = [random.randint(0, n - 1) for _ in range(n)]
             sample_a = [scores_a[i] for i in indices]
             sample_b = [scores_b[i] for i in indices]
@@ -384,7 +384,7 @@ class StatisticalTests:
             boot_diff = self.mean(sample_a) - self.mean(sample_b)
             bootstrap_diffs.append(boot_diff)
         
-        # Compute confidence interval (percentile method)
+                                                         
         bootstrap_diffs.sort()
         alpha_half = (1 - ci_level) / 2
         lower_idx = int(alpha_half * n_bootstrap)
@@ -393,19 +393,19 @@ class StatisticalTests:
         ci_lower = bootstrap_diffs[lower_idx]
         ci_upper = bootstrap_diffs[upper_idx]
         
-        # Check if CI excludes zero
+                                   
         significant = ci_lower > 0 or ci_upper < 0
         
-        # Approximate p-value from bootstrap
-        # Count how many bootstrap samples cross zero
+                                            
+                                                     
         if observed_diff > 0:
             p_value = 2 * sum(1 for d in bootstrap_diffs if d <= 0) / n_bootstrap
         else:
             p_value = 2 * sum(1 for d in bootstrap_diffs if d >= 0) / n_bootstrap
         
-        p_value = max(p_value, 1 / n_bootstrap)  # Minimum p-value
+        p_value = max(p_value, 1 / n_bootstrap)                   
         
-        # Effect size
+                     
         pooled_std = math.sqrt((self.std(scores_a) ** 2 + self.std(scores_b) ** 2) / 2)
         effect_size = abs(observed_diff) / pooled_std if pooled_std > 0 else 0.0
         
@@ -449,15 +449,15 @@ class StatisticalTests:
         n = len(scores_a)
         observed_diff = abs(self.mean(scores_a) - self.mean(scores_b))
         
-        # Combine scores
+                        
         combined = list(zip(scores_a, scores_b))
         
-        # Count more extreme differences
+                                        
         random.seed(self.random_seed)
         more_extreme = 0
         
         for _ in range(n_permutations):
-            # Randomly swap each pair
+                                     
             perm_a = []
             perm_b = []
             for a, b in combined:
@@ -473,9 +473,9 @@ class StatisticalTests:
                 more_extreme += 1
         
         p_value = more_extreme / n_permutations
-        p_value = max(p_value, 1 / n_permutations)  # Minimum p-value
+        p_value = max(p_value, 1 / n_permutations)                   
         
-        # Effect size
+                     
         pooled_std = math.sqrt((self.std(scores_a) ** 2 + self.std(scores_b) ** 2) / 2)
         effect_size = observed_diff / pooled_std if pooled_std > 0 else 0.0
         
@@ -576,13 +576,13 @@ class StatisticalTests:
             method_b_std=self.std(scores_b)
         )
         
-        # Run tests
+                   
         summary.tests["paired_ttest"] = self.paired_ttest(scores_a, scores_b)
         summary.tests["wilcoxon"] = self.wilcoxon_signed_rank(scores_a, scores_b)
         summary.tests["bootstrap"] = self.bootstrap_ci(scores_a, scores_b)
         summary.tests["permutation"] = self.permutation_test(scores_a, scores_b)
         
-        # Determine winner and confidence
+                                         
         n_significant = sum(1 for t in summary.tests.values() if t.significant)
         
         if n_significant >= 3:
@@ -641,16 +641,16 @@ class StatisticalTests:
         """
         n = len(p_values)
         
-        # Sort p-values with original indices
+                                             
         sorted_pairs = sorted(enumerate(p_values), key=lambda x: x[1])
         
-        # Compute adjusted p-values
+                                   
         adjusted = [0.0] * n
         prev_adj = 0.0
         
         for rank, (idx, p) in enumerate(sorted_pairs, 1):
             adj_p = min(p * n / rank, 1.0)
-            adj_p = max(adj_p, prev_adj)  # Enforce monotonicity
+            adj_p = max(adj_p, prev_adj)                        
             adjusted[idx] = adj_p
             prev_adj = adj_p
         

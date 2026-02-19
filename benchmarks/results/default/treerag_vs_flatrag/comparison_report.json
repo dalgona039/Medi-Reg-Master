@@ -1,0 +1,182 @@
+{
+  "systems": {
+    "primary": "TreeRAG",
+    "baseline": "FlatRAG"
+  },
+  "summary": {
+    "TreeRAG_wins": 0,
+    "FlatRAG_wins": 1,
+    "ties": 11,
+    "total_comparisons": 12
+  },
+  "comparisons": {
+    "P@1": {
+      "winner": null,
+      "confidence": "none",
+      "TreeRAG_mean": 1.0,
+      "FlatRAG_mean": 1.0,
+      "difference": 0.0,
+      "p_value": 0.5,
+      "effect_size": 0.0,
+      "effect_interpretation": "negligible",
+      "ci_95": [
+        0.0,
+        0.0
+      ]
+    },
+    "NDCG@1": {
+      "winner": null,
+      "confidence": "none",
+      "TreeRAG_mean": 1.0,
+      "FlatRAG_mean": 1.0,
+      "difference": 0.0,
+      "p_value": 0.5,
+      "effect_size": 0.0,
+      "effect_interpretation": "negligible",
+      "ci_95": [
+        0.0,
+        0.0
+      ]
+    },
+    "P@3": {
+      "winner": null,
+      "confidence": "none",
+      "TreeRAG_mean": 0.6666666666666666,
+      "FlatRAG_mean": 0.6666666666666666,
+      "difference": 0.0,
+      "p_value": 0.5,
+      "effect_size": 0.0,
+      "effect_interpretation": "negligible",
+      "ci_95": [
+        0.0,
+        0.0
+      ]
+    },
+    "NDCG@3": {
+      "winner": null,
+      "confidence": "none",
+      "TreeRAG_mean": 1.0,
+      "FlatRAG_mean": 1.0,
+      "difference": 0.0,
+      "p_value": 0.5,
+      "effect_size": 0.0,
+      "effect_interpretation": "negligible",
+      "ci_95": [
+        0.0,
+        0.0
+      ]
+    },
+    "P@5": {
+      "winner": null,
+      "confidence": "none",
+      "TreeRAG_mean": 0.39999999999999997,
+      "FlatRAG_mean": 0.39999999999999997,
+      "difference": 0.0,
+      "p_value": 0.5,
+      "effect_size": 0.0,
+      "effect_interpretation": "negligible",
+      "ci_95": [
+        0.0,
+        0.0
+      ]
+    },
+    "NDCG@5": {
+      "winner": null,
+      "confidence": "none",
+      "TreeRAG_mean": 1.0,
+      "FlatRAG_mean": 1.0,
+      "difference": 0.0,
+      "p_value": 0.5,
+      "effect_size": 0.0,
+      "effect_interpretation": "negligible",
+      "ci_95": [
+        0.0,
+        0.0
+      ]
+    },
+    "P@10": {
+      "winner": null,
+      "confidence": "none",
+      "TreeRAG_mean": 0.19999999999999998,
+      "FlatRAG_mean": 0.19999999999999998,
+      "difference": 0.0,
+      "p_value": 0.5,
+      "effect_size": 0.0,
+      "effect_interpretation": "negligible",
+      "ci_95": [
+        0.0,
+        0.0
+      ]
+    },
+    "NDCG@10": {
+      "winner": null,
+      "confidence": "none",
+      "TreeRAG_mean": 1.0,
+      "FlatRAG_mean": 1.0,
+      "difference": 0.0,
+      "p_value": 0.5,
+      "effect_size": 0.0,
+      "effect_interpretation": "negligible",
+      "ci_95": [
+        0.0,
+        0.0
+      ]
+    },
+    "MRR": {
+      "winner": null,
+      "confidence": "none",
+      "TreeRAG_mean": 1.0,
+      "FlatRAG_mean": 1.0,
+      "difference": 0.0,
+      "p_value": 0.5,
+      "effect_size": 0.0,
+      "effect_interpretation": "negligible",
+      "ci_95": [
+        0.0,
+        0.0
+      ]
+    },
+    "Latency": {
+      "winner": null,
+      "confidence": "none",
+      "FlatRAG_mean": 0.003458660406370958,
+      "TreeRAG_mean": 0.003986332255105178,
+      "difference": -0.00052767184873422,
+      "p_value": 0.45233186121813185,
+      "effect_size": 0.19284936813019216,
+      "effect_interpretation": "negligible",
+      "ci_95": [
+        -0.0028320355340838432,
+        0.0008330680429935455
+      ]
+    },
+    "Tokens": {
+      "winner": "FlatRAG",
+      "confidence": "medium",
+      "FlatRAG_mean": 32.0,
+      "TreeRAG_mean": 29.0,
+      "difference": 3.0,
+      "p_value": 0.0,
+      "effect_size": 0.0,
+      "effect_interpretation": "negligible",
+      "ci_95": [
+        3.0,
+        3.0
+      ]
+    },
+    "Groundedness": {
+      "winner": null,
+      "confidence": "none",
+      "TreeRAG_mean": 0.16666666666666666,
+      "FlatRAG_mean": 0.16666666666666666,
+      "difference": 0.0,
+      "p_value": 0.5,
+      "effect_size": 0.0,
+      "effect_interpretation": "negligible",
+      "ci_95": [
+        0.0,
+        0.0
+      ]
+    }
+  }
+}

@@ -16,21 +16,21 @@ from enum import Enum
 
 class HallucinationType(str, Enum):
     """Types of hallucinations."""
-    UNSUPPORTED_CLAIM = "unsupported_claim"  # Claim not in context
-    CONTRADICTORY = "contradictory"  # Contradicts context
-    FABRICATED_ENTITY = "fabricated_entity"  # Made-up names/numbers
-    EXTRAPOLATION = "extrapolation"  # Goes beyond context
-    TEMPORAL_ERROR = "temporal_error"  # Wrong dates/sequence
-    QUANTITATIVE_ERROR = "quantitative_error"  # Wrong numbers
+    UNSUPPORTED_CLAIM = "unsupported_claim"                        
+    CONTRADICTORY = "contradictory"                       
+    FABRICATED_ENTITY = "fabricated_entity"                         
+    EXTRAPOLATION = "extrapolation"                       
+    TEMPORAL_ERROR = "temporal_error"                        
+    QUANTITATIVE_ERROR = "quantitative_error"                 
 
 
 @dataclass
 class Claim:
     """Single factual claim in an answer."""
     text: str
-    claim_type: str  # fact, number, entity, temporal
-    grounded: bool  # Supported by context
-    source_span: Optional[str] = None  # Supporting text from context
+    claim_type: str                                  
+    grounded: bool                        
+    source_span: Optional[str] = None                                
     confidence: float = 0.0
     hallucination_type: Optional[HallucinationType] = None
 
@@ -74,23 +74,23 @@ class FidelityAnalysis:
 @dataclass
 class FidelityResult:
     """Aggregated fidelity metrics."""
-    # Overall scores
+                    
     groundedness_mean: float = 0.0
     groundedness_std: float = 0.0
     hallucination_rate_mean: float = 0.0
     
-    # By claim type
+                   
     claims_by_type: Dict[str, int] = field(default_factory=dict)
     groundedness_by_type: Dict[str, float] = field(default_factory=dict)
     
-    # Hallucination breakdown
+                             
     hallucinations_by_type: Dict[str, int] = field(default_factory=dict)
     
-    # Per-query details
+                       
     per_query_groundedness: Dict[str, float] = field(default_factory=dict)
     per_query_claims: Dict[str, int] = field(default_factory=dict)
     
-    # Statistics
+                
     total_claims: int = 0
     total_grounded: int = 0
     total_hallucinated: int = 0
@@ -133,7 +133,7 @@ class FidelityMetrics:
         self.use_llm = use_llm
         self.llm_client = llm_client
         
-        # Patterns for entity/number extraction
+                                               
         self._number_pattern = re.compile(r'\b\d+(?:\.\d+)?(?:%|억|만|천|백|개|년|월|일)?\b')
         self._entity_pattern = re.compile(r'(?:^|[^가-힣])[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*')
         self._date_pattern = re.compile(r'\d{4}[-./]\d{1,2}[-./]\d{1,2}|\d{4}년\s*\d{1,2}월|\d{1,2}월\s*\d{1,2}일')
@@ -150,7 +150,7 @@ class FidelityMetrics:
         """
         claims = []
         
-        # Split into sentences
+                              
         sentences = re.split(r'[.!?]\s+|[。！？]', answer)
         
         for sentence in sentences:
@@ -158,7 +158,7 @@ class FidelityMetrics:
             if not sentence or len(sentence) < 10:
                 continue
             
-            # Determine claim type
+                                  
             claim_type = "fact"
             
             if self._number_pattern.search(sentence):
@@ -171,7 +171,7 @@ class FidelityMetrics:
             claims.append(Claim(
                 text=sentence,
                 claim_type=claim_type,
-                grounded=False  # Will be verified later
+                grounded=False                          
             ))
         
         return claims
@@ -190,40 +190,40 @@ class FidelityMetrics:
         claim_text = claim.text.lower()
         context_lower = context.lower()
         
-        # Extract key terms from claim
+                                      
         words = set(re.findall(r'\b\w{3,}\b', claim_text))
         
-        # Remove common words
+                             
         stopwords = {'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been',
                     '이', '가', '을', '를', '의', '에', '에서', '로', '으로', '와', '과'}
         words = words - stopwords
         
         if not words:
-            return True, None  # No meaningful words to check
+            return True, None                                
         
-        # Check overlap
+                       
         context_words = set(re.findall(r'\b\w{3,}\b', context_lower))
         overlap = words & context_words
         overlap_ratio = len(overlap) / len(words) if words else 0
         
-        # For numbers, check exact match
+                                        
         if claim.claim_type == "number":
             numbers_in_claim = self._number_pattern.findall(claim.text)
             for num in numbers_in_claim:
                 if num in context:
                     return True, f"Found: {num}"
-            # Low overlap and no matching numbers = likely hallucination
+                                                                        
             if overlap_ratio < 0.5:
                 return False, None
         
-        # For entities, check if entity name appears
+                                                    
         if claim.claim_type == "entity":
             entities = self._entity_pattern.findall(claim.text)
             for entity in entities:
                 if entity.lower() in context_lower:
                     return True, f"Found entity: {entity}"
         
-        # General: require significant overlap
+                                              
         is_grounded = overlap_ratio >= 0.4
         
         return is_grounded, f"Overlap: {overlap_ratio:.2f}" if is_grounded else None
@@ -245,17 +245,17 @@ class FidelityMetrics:
         Returns:
             Fidelity analysis
         """
-        # Extract claims
+                        
         claims = self.extract_claims_simple(answer)
         
-        # Verify each claim
+                           
         for claim in claims:
             is_grounded, source_span = self.verify_claim_simple(claim, context)
             claim.grounded = is_grounded
             claim.source_span = source_span
             
             if not is_grounded:
-                # Classify hallucination type
+                                             
                 claim.hallucination_type = self._classify_hallucination(claim, context)
         
         return FidelityAnalysis(
@@ -270,7 +270,7 @@ class FidelityMetrics:
         claim_text = claim.text.lower()
         context_lower = context.lower()
         
-        # Check for contradiction
+                                 
         negation_pairs = [
             ('not', 'is'), ('no', 'yes'), ('never', 'always'),
             ('없', '있'), ('아니', '맞')
@@ -279,19 +279,19 @@ class FidelityMetrics:
             if neg in claim_text and pos in context_lower:
                 return HallucinationType.CONTRADICTORY
         
-        # Check for fabricated numbers
+                                      
         if claim.claim_type == "number":
             return HallucinationType.QUANTITATIVE_ERROR
         
-        # Check for temporal errors
+                                   
         if claim.claim_type == "temporal":
             return HallucinationType.TEMPORAL_ERROR
         
-        # Check for fabricated entities
+                                       
         if claim.claim_type == "entity":
             return HallucinationType.FABRICATED_ENTITY
         
-        # Default: unsupported claim
+                                    
         return HallucinationType.UNSUPPORTED_CLAIM
     
     def compute_metrics(
@@ -314,14 +314,14 @@ class FidelityMetrics:
         if not analyses:
             return result
         
-        # Aggregate scores
+                          
         groundedness_scores = [a.groundedness_score for a in analyses]
         
         result.groundedness_mean = statistics.mean(groundedness_scores)
         result.groundedness_std = statistics.stdev(groundedness_scores) if len(groundedness_scores) > 1 else 0.0
         result.hallucination_rate_mean = 1.0 - result.groundedness_mean
         
-        # Count claims by type
+                              
         claims_by_type: Dict[str, int] = {}
         grounded_by_type: Dict[str, int] = {}
         hallucinations_by_type: Dict[str, int] = {}
@@ -348,7 +348,7 @@ class FidelityMetrics:
         result.claims_by_type = claims_by_type
         result.hallucinations_by_type = hallucinations_by_type
         
-        # Compute groundedness by type
+                                      
         for claim_type, count in claims_by_type.items():
             grounded = grounded_by_type.get(claim_type, 0)
             result.groundedness_by_type[claim_type] = grounded / count if count > 0 else 0.0
@@ -366,7 +366,7 @@ class CitationAccuracy:
     
     def __init__(self):
         """Initialize citation accuracy checker."""
-        # Pattern for citations like [1], [2], (Source: X)
+                                                          
         self._citation_pattern = re.compile(r'\[(\d+)\]|\((?:Source|출처|참고):\s*([^)]+)\)')
     
     def extract_citations(self, answer: str) -> List[Tuple[str, int]]:
@@ -390,7 +390,7 @@ class CitationAccuracy:
     def verify_citations(
         self,
         answer: str,
-        sources: Dict[str, str]  # citation -> source text
+        sources: Dict[str, str]                           
     ) -> Dict[str, Any]:
         """
         Verify citation accuracy.
@@ -408,7 +408,7 @@ class CitationAccuracy:
             return {
                 "total_citations": 0,
                 "verified": 0,
-                "accuracy": 1.0,  # No citations = no errors
+                "accuracy": 1.0,                            
                 "details": []
             }
         
@@ -416,15 +416,15 @@ class CitationAccuracy:
         details = []
         
         for citation, pos in citations:
-            # Get surrounding context in answer
+                                               
             start = max(0, pos - 100)
             end = min(len(answer), pos + 100)
             surrounding = answer[start:end]
             
-            # Check if citation source supports surrounding text
+                                                                
             source = sources.get(citation, "")
             if source:
-                # Simple overlap check
+                                      
                 words = set(re.findall(r'\b\w{4,}\b', surrounding.lower()))
                 source_words = set(re.findall(r'\b\w{4,}\b', source.lower()))
                 overlap = len(words & source_words) / len(words) if words else 0

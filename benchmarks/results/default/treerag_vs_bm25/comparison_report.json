@@ -1,0 +1,13 @@
+{
+  "systems": {
+    "primary": "TreeRAG",
+    "baseline": "BM25"
+  },
+  "summary": {
+    "TreeRAG_wins": 0,
+    "BM25_wins": 0,
+    "ties": 0,
+    "total_comparisons": 0
+  },
+  "comparisons": {}
+}

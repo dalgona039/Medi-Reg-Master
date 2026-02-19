@@ -1,0 +1,52 @@
+{
+  "version": "1.0",
+  "description": "실제 TreeRAG 시스템 벤치마크 질문",
+  "n_questions": 5,
+  "questions": [
+    {
+      "question_id": "real_001",
+      "question": "2025학년도 반도체공학과 교육과정의 주요 내용은?",
+      "document_id": "2025학년도 교육과정 반도체공학과",
+      "relevant_sections": ["sec_1", "sec_2"],
+      "expected_answer": "2025학년도 반도체공학과 교육과정의 핵심 내용",
+      "domain": "academic",
+      "difficulty": "medium"
+    },
+    {
+      "question_id": "real_002",
+      "question": "생체의공학 보고서에서 다루는 주요 주제는?",
+      "document_id": "생체의공학개론_보고서",
+      "relevant_sections": ["introduction", "main_topics"],
+      "expected_answer": "생체의공학의 주요 연구 주제와 응용 분야",
+      "domain": "academic",
+      "difficulty": "medium"
+    },
+    {
+      "question_id": "real_003",
+      "question": "웹 프로그래밍 프로젝트의 구현 방법은?",
+      "document_id": "웹:파이썬 프로그래밍 프로젝트 #6 보고서",
+      "relevant_sections": ["implementation", "methodology"],
+      "expected_answer": "웹 프로그래밍 프로젝트의 기술적 구현 방법",
+      "domain": "technical",
+      "difficulty": "hard"
+    },
+    {
+      "question_id": "real_004",
+      "question": "ArXiv 논문 2204.08939v1의 핵심 기여는?",
+      "document_id": "0cbccdf9_2204.08939v1-2",
+      "relevant_sections": ["abstract", "contributions"],
+      "expected_answer": "논문의 주요 기여와 연구 결과",
+      "domain": "research",
+      "difficulty": "hard"
+    },
+    {
+      "question_id": "real_005",
+      "question": "생체의공학개론 11장의 주요 내용은?",
+      "document_id": "생체의공학개론#11",
+      "relevant_sections": ["chapter_11"],
+      "expected_answer": "11장의 핵심 개념과 내용",
+      "domain": "academic",
+      "difficulty": "easy"
+    }
+  ]
+}

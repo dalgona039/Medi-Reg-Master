@@ -50,8 +50,8 @@ class TokenUsage:
     input_tokens: int
     output_tokens: int
     total_tokens: int
-    context_tokens: int  # Tokens in retrieved context
-    original_document_tokens: int  # Full document tokens
+    context_tokens: int                               
+    original_document_tokens: int                        
     
     @property
     def reduction_rate(self) -> float:
@@ -98,34 +98,34 @@ class TraversalStats:
 @dataclass
 class EfficiencyResult:
     """Aggregated efficiency metrics."""
-    # Latency statistics
+                        
     latency_mean_ms: float = 0.0
     latency_median_ms: float = 0.0
     latency_p95_ms: float = 0.0
     latency_p99_ms: float = 0.0
     latency_std_ms: float = 0.0
     
-    # LLM-specific latency
+                          
     llm_latency_mean_ms: float = 0.0
     overhead_mean_ms: float = 0.0
     
-    # Throughput
+                
     throughput_qps: float = 0.0
     
-    # Token efficiency
+                      
     token_reduction_mean: float = 0.0
     token_reduction_std: float = 0.0
     compression_ratio_mean: float = 0.0
     total_input_tokens: int = 0
     total_output_tokens: int = 0
     
-    # Traversal efficiency
+                          
     nodes_visited_mean: float = 0.0
     visit_rate_mean: float = 0.0
     pruning_rate_mean: float = 0.0
     max_depth_mean: float = 0.0
     
-    # Per-query details
+                       
     per_query_latencies: Dict[str, float] = field(default_factory=dict)
     per_query_tokens: Dict[str, int] = field(default_factory=dict)
     
@@ -257,7 +257,7 @@ class EfficiencyMetrics:
         """Compute all efficiency metrics."""
         result = EfficiencyResult()
         
-        # Latency stats
+                       
         latency_stats = self.compute_latency_stats()
         if latency_stats:
             result.latency_mean_ms = latency_stats["mean_ms"]
@@ -268,16 +268,16 @@ class EfficiencyMetrics:
             result.llm_latency_mean_ms = latency_stats["llm_mean_ms"]
             result.overhead_mean_ms = latency_stats["overhead_mean_ms"]
             
-            # Compute throughput
+                                
             total_time_s = sum(m.total_ms for m in self._latency_measurements) / 1000
             if total_time_s > 0:
                 result.throughput_qps = len(self._latency_measurements) / total_time_s
             
-            # Per-query latencies
+                                 
             for m in self._latency_measurements:
                 result.per_query_latencies[m.query_id] = m.total_ms
         
-        # Token stats
+                     
         token_stats = self.compute_token_stats()
         if token_stats:
             result.token_reduction_mean = token_stats["reduction_mean"]
@@ -286,11 +286,11 @@ class EfficiencyMetrics:
             result.total_input_tokens = token_stats["total_input"]
             result.total_output_tokens = token_stats["total_output"]
             
-            # Per-query tokens
+                              
             for u in self._token_usage:
                 result.per_query_tokens[u.query_id] = u.total_tokens
         
-        # Traversal stats
+                         
         traversal_stats = self.compute_traversal_stats()
         if traversal_stats:
             result.nodes_visited_mean = traversal_stats["nodes_visited_mean"]
@@ -339,7 +339,7 @@ class EfficiencyMetrics:
             encoding = tiktoken.encoding_for_model(model)
             return len(encoding.encode(text))
         except ImportError:
-            # Rough estimate: ~4 characters per token
+                                                     
             return len(text) // 4
 
 
@@ -382,7 +382,7 @@ def compare_token_efficiency(
     if len(treerag_tokens) != len(baseline_tokens):
         raise ValueError("Token lists must have same length")
     
-    # Per-query reduction
+                         
     reductions = [
         1.0 - (tr / bl) if bl > 0 else 0.0
         for tr, bl in zip(treerag_tokens, baseline_tokens)

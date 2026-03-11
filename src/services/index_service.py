@@ -10,7 +10,7 @@ from src.core.indexer import RegulatoryIndexer
 class IndexResult:
     success: bool
     index_filename: Optional[str] = None
-    status: str = "failed"  # "created", "existing", "failed"
+    status: str = "failed" 
     error_message: Optional[str] = None
 
 

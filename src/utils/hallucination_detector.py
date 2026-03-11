@@ -1,9 +1,3 @@
-"""
-Hallucination Detection Module
-
-Detects potential hallucinations in LLM responses by comparing
-generated content against source documents.
-"""
 import re
 import logging
 from typing import List, Dict, Any, Tuple
@@ -13,7 +7,6 @@ logger = logging.getLogger(__name__)
 
 
 class HallucinationDetector:
-    """Detects potential hallucinations in LLM-generated responses."""
     
     def __init__(
         self,
@@ -32,16 +25,6 @@ class HallucinationDetector:
         self.confidence_threshold = self.sentence_threshold
     
     def detect(self, answer: str, source_nodes: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """
-        Analyze answer for potential hallucinations.
-        
-        Args:
-            answer: Generated answer text
-            source_nodes: List of source nodes with 'content' field
-        
-        Returns:
-            Detection result with overall confidence and sentence-level analysis
-        """
         source_text = self._build_source_text(source_nodes)
         
         logger.debug("Hallucination Detection:")
@@ -109,36 +92,21 @@ class HallucinationDetector:
         return " ".join(chunks)
     
     def _split_sentences(self, text: str) -> List[str]:
-        """Split text into sentences."""
         sentences = re.split(r'[.!?]+\s+', text)
         return [s.strip() for s in sentences if s.strip()]
     
     def _calculate_sentence_confidence(self, sentence: str, source_text: str) -> float:
-        """
-        Calculate confidence that a sentence is grounded in source.
-        
-        Enhanced semantic similarity using:
-        1. Direct substring matching
-        2. Weighted word overlap (domain terms, numbers)
-        3. N-gram overlap (bigrams, trigrams)
-        4. Character-level similarity
-        5. Citation presence boost
-        """
         sentence_lower = sentence.lower()
         source_lower = source_text.lower()
         
-        # Short sentences get moderate confidence
         if len(sentence_lower) < 10:
             return 0.75
         
-        # Exact match
         if sentence_lower in source_lower:
             return 1.0
         
-        # Use max score approach with weighted signals
         scores = []
         
-        # 1. Citation presence (strong signal)
         citation_patterns = [
             r'\[.+?,\s*p\.\d+(?:[-–]\d+)?\]',
             r'\[.+?,\s*pp\.\d+(?:[-–]\d+)?\]',
@@ -150,7 +118,6 @@ class HallucinationDetector:
         if has_citation:
             scores.append(0.85)
         
-        # 2. Word overlap with weights
         sentence_words = re.findall(r'\w+', sentence_lower)
         source_words = re.findall(r'\w+', source_lower)
         
@@ -168,7 +135,6 @@ class HallucinationDetector:
             
             for word in sentence_words_filtered:
                 weight = 1.0
-                # Numbers and long words are important
                 if re.match(r'\d+', word):
                     weight = 2.5
                 elif len(word) > 8:
@@ -182,19 +148,16 @@ class HallucinationDetector:
             
             if total_weight > 0:
                 word_overlap = matched_words / total_weight
-                # Word overlap is a strong signal, weight it heavily
                 scores.append(word_overlap)
-                scores.append(word_overlap)  # Double weight
+                scores.append(word_overlap) 
         
-        # 3. Bigram overlap (moderate signal)
         bigrams_sent = [' '.join(sentence_words[i:i+2]) for i in range(len(sentence_words)-1)]
         bigrams_src = [' '.join(source_words[i:i+2]) for i in range(len(source_words)-1)]
         if bigrams_sent:
             bigram_overlap = len([b for b in bigrams_sent if b in bigrams_src]) / len(bigrams_sent)
             if bigram_overlap > 0:
-                scores.append(bigram_overlap * 1.2)  # Boost bigram signals
+                scores.append(bigram_overlap * 1.2)  
         
-        # 4. Trigram overlap (strong signal when present)
         trigrams_sent = [' '.join(sentence_words[i:i+3]) for i in range(len(sentence_words)-2)]
         trigrams_src = [' '.join(source_words[i:i+3]) for i in range(len(source_words)-2)]
         if trigrams_sent:

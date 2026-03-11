@@ -32,7 +32,7 @@ class UploadService:
                 error_message=filename_validation.error_message
             )
         
-        safe_filename: str = filename_validation.validated_filename  # type: ignore
+        safe_filename: str = filename_validation.validated_filename  
         
         content_validation = self.document_repo.validate_content(content, content_type)
         if not content_validation.is_valid:

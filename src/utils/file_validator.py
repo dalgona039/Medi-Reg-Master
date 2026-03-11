@@ -1,7 +1,3 @@
-"""
-File validation utilities with Magic Byte verification.
-MIME 스푸핑 방지를 위한 실제 파일 타입 검증.
-"""
 import magic
 from typing import Tuple, Optional
 from pathlib import Path

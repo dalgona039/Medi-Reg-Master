@@ -1,4 +1,3 @@
-"""Pydantic schemas for data validation."""
 from typing import Optional, List
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 
